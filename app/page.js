@@ -50,7 +50,7 @@ export default function Home() {
       </header>
 
       <section className="wr-auth-card">
-        <img className="wr-official-logo" src="/wakhreek-logo.png" alt="WakhReek - Boutiques, Messagerie, Communauté" />
+        <img className="wr-official-logo" src="/wakhreek-logo.svg?v=2" alt="WakhReek" />
         <p className="wr-subtitle">Inscris-toi pour accéder aux boutiques et à la messagerie.</p>
         <div className="wr-mode-tabs" role="tablist" aria-label="Inscription ou connexion">
           <button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage('') }}>Inscription</button>
