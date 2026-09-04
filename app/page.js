@@ -54,34 +54,66 @@ export default function Home() {
     router.replace('/communication')
   }
 
-  if (loading) return <main className="landing-shell"><section className="landing-card"><p>Chargement...</p></section></main>
+  if (loading) {
+    return (
+      <main className="wr-landing">
+        <div className="wr-auth-card wr-loading">Chargement...</div>
+      </main>
+    )
+  }
 
   return (
-    <main className="landing-shell">
-      <header className="landing-topbar">
-        <div className="landing-brand"><span className="app-logo">wR</span><strong>WakhReek -Onley Took</strong></div>
-        <span>Français</span>
+    <main className="wr-landing">
+      <header className="wr-topbar">
+        <div className="wr-top-brand">
+          <span className="wr-mini-logo">wR</span>
+          <strong>WakhReek -Onley Took</strong>
+        </div>
+        <span className="wr-language">Français</span>
       </header>
 
-      <section className="landing-card">
-        <div className="landing-logo"><span className="landing-logo-mark">wR</span><strong>WAKHREEK</strong></div>
-        <h1>ONLY TOK</h1>
-        <h2>WAKH REEK</h2>
-        <p>Inscrivez-vous et communiquez librement.</p>
-
-        <div className="tabs">
-          <button className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage('') }}>Connexion</button>
-          <button className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage('') }}>Inscription</button>
+      <section className="wr-auth-card">
+        <div className="wr-logo-block">
+          <div className="wr-logo-mark">wR</div>
+          <div className="wr-logo-word">WAKHREEK</div>
         </div>
 
-        <form className="auth-form" onSubmit={mode === 'signup' ? signUp : signIn}>
-          {mode === 'signup' && <input name="displayName" value={form.displayName} onChange={change} placeholder="Nom complet" required />}
-          {mode === 'signup' && <input name="phone" value={form.phone} onChange={change} placeholder="Téléphone" required />}
+        <h1>ONLY TOK</h1>
+        <h2>WAKH REEK</h2>
+        <p className="wr-subtitle">Inscrivez-vous et communiquez librement.</p>
+
+        <div className="wr-mode-tabs" role="tablist" aria-label="Connexion ou inscription">
+          <button
+            type="button"
+            className={mode === 'login' ? 'active' : ''}
+            onClick={() => { setMode('login'); setMessage('') }}
+          >
+            Connexion
+          </button>
+          <button
+            type="button"
+            className={mode === 'signup' ? 'active' : ''}
+            onClick={() => { setMode('signup'); setMessage('') }}
+          >
+            Inscription
+          </button>
+        </div>
+
+        <form className="wr-auth-form" onSubmit={mode === 'signup' ? signUp : signIn}>
+          {mode === 'signup' && (
+            <input name="displayName" value={form.displayName} onChange={change} placeholder="Nom complet" required />
+          )}
+          {mode === 'signup' && (
+            <input name="phone" value={form.phone} onChange={change} placeholder="Téléphone" required />
+          )}
           <input name="email" type="email" value={form.email} onChange={change} placeholder="E-mail" autoComplete="email" required />
           <input name="password" type="password" value={form.password} onChange={change} placeholder="Mot de passe" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={6} required />
-          <button className="primary" type="submit">{mode === 'signup' ? "S'inscrire" : 'Se connecter'}</button>
+          <button className="wr-primary" type="submit">
+            {mode === 'signup' ? "S'inscrire" : 'Se connecter'}
+          </button>
         </form>
-        {message && <p className="message">{message}</p>}
+
+        {message && <p className="wr-message">{message}</p>}
       </section>
     </main>
   )
