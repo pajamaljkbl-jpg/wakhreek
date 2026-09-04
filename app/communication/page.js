@@ -58,6 +58,13 @@ export default function CommunicationPage() {
     setStatus('')
   }
 
+  function closeConversation() {
+    setActivePerson(null)
+    setConversationId(null)
+    setMessages([])
+    setStatus('')
+  }
+
   async function sendMessage(e) {
     e.preventDefault()
     const body = text.trim()
@@ -75,7 +82,7 @@ export default function CommunicationPage() {
 
   return (
     <AppShell>
-      <div className="communication-layout wr-chat-reference">
+      <div className={`communication-layout wr-chat-reference ${activePerson ? 'mobile-chat-open' : ''}`}>
         <aside className="chat-sidebar">
           <form className="chat-search" onSubmit={searchPeople}>
             <span className="search-icon">⌕</span>
@@ -99,6 +106,7 @@ export default function CommunicationPage() {
 
         <section className="chat-main">
           <header className="chat-header">
+            <button className="mobile-back" type="button" aria-label="Retour" onClick={closeConversation}>‹</button>
             <div className="chat-contact"><span className="chat-avatar large">{initial(activePerson)}</span><span><strong>{activePerson?.display_name || 'WakhReek Communication'}</strong><small>{activePerson ? '● En ligne' : 'Choisissez un contact'}</small></span></div>
             <div className="chat-actions"><button type="button" aria-label="Rechercher">⌕</button><button type="button" aria-label="Appel audio" onClick={() => notReady('Appel audio')}>☎</button><button type="button" aria-label="Appel vidéo" onClick={() => notReady('Appel vidéo')}>▣</button><button type="button" aria-label="Menu">⋮</button></div>
           </header>
