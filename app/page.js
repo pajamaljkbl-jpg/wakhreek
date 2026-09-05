@@ -31,17 +31,26 @@ export default function Home() {
 
   async function signUp(e) {
     e.preventDefault()
-    setMessage('Création du compte...')
+    const displayName = form.displayName.trim()
+    const phone = form.phone.trim()
+    const email = form.email.trim().toLowerCase()
 
+    if (!displayName || !phone || !email) return setMessage('Veuillez remplir tous les champs.')
+    setMessage('Vérification des informations...')
+
+    const { data: identity, error: identityError } = await supabase
+      .rpc('check_registration_identity', { check_phone: phone, check_display_name: displayName })
+
+    if (identityError) return setMessage('Impossible de vérifier les informations. Réessayez.')
+    if (identity?.[0]?.phone_taken) return setMessage('Ce numéro de téléphone est déjà utilisé par un autre compte.')
+
+    setMessage('Création du compte...')
     const { error } = await supabase.auth.signUp({
-      email: form.email.trim(),
+      email,
       password: form.password,
       options: {
         emailRedirectTo: `${window.location.origin}/communication`,
-        data: {
-          display_name: form.displayName.trim(),
-          phone: form.phone.trim(),
-        },
+        data: { display_name: displayName, phone },
       },
     })
 
