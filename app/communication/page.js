@@ -87,10 +87,25 @@ export default function CommunicationPage() {
 
   const visiblePeople = useMemo(() => {
     const q = search.trim().toLowerCase()
-    let list = people.filter((person) => !q || (person.display_name || '').toLowerCase().includes(q) || (person.email || '').toLowerCase().includes(q))
+    let list
+
+    if (q) {
+      list = people.filter((person) =>
+        (person.display_name || '').toLowerCase().includes(q) ||
+        (person.email || '').toLowerCase().includes(q)
+      )
+    } else {
+      list = people.filter((person) => Boolean(conversationMeta[person.id]))
+    }
+
     if (filter === 'groupes') return []
     if (filter === 'non-lues' || filter === 'favoris') return list
-    return [...list].sort((a, b) => (conversationMeta[b.id]?.latest?.created_at || '').localeCompare(conversationMeta[a.id]?.latest?.created_at || ''))
+
+    return [...list].sort((a, b) =>
+      (conversationMeta[b.id]?.latest?.created_at || '').localeCompare(
+        conversationMeta[a.id]?.latest?.created_at || ''
+      )
+    )
   }, [people, search, filter, conversationMeta])
 
   async function openConversation(person) {
@@ -225,11 +240,11 @@ export default function CommunicationPage() {
 
       <div className={`${styles.shell} ${activePerson ? styles.hasActive : ''}`}>
         <aside className={styles.sidebar}>
-          <div className={styles.searchWrap}><span>⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher ou démarrer une discussion" /></div>
+          <div className={styles.searchWrap}><span>⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un contact ou un utilisateur" /></div>
           <div className={styles.filters}>{[['toutes','Toutes'],['non-lues','Non lues'],['favoris','Favoris'],['groupes','Groupes']].map(([key,label]) => <button type="button" key={key} className={filter === key ? styles.filterActive : ''} onClick={() => setFilter(key)}>{label}</button>)}</div>
           <div className={styles.contactList}>
             {visiblePeople.map((person) => <button type="button" key={person.id} className={`${styles.contactRow} ${activePerson?.id === person.id ? styles.contactActive : ''}`} onClick={() => openConversation(person)}><div className={styles.contactAvatar}>{initials(person)}<i /></div><div className={styles.contactCopy}><div><strong>{person.display_name || 'Utilisateur WakhReek'}</strong><time>{formatTime(conversationMeta[person.id]?.latest?.created_at)}</time></div><p>{latestLabel(person)}</p></div></button>)}
-            {!visiblePeople.length && <p className={styles.empty}>Aucune conversation</p>}
+            {!visiblePeople.length && <p className={styles.empty}>{search.trim() ? 'Aucun utilisateur trouvé' : 'Aucune conversation'}</p>}
           </div>
           <div className={styles.encryption}>🔒 Vos messages personnels sont <strong>protégés</strong></div>
         </aside>
