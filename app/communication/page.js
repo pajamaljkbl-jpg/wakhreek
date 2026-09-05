@@ -18,7 +18,19 @@ export default function CommunicationPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('toutes')
   const [status, setStatus] = useState('')
+  const [recording, setRecording] = useState(false)
+  const [uploadingAudio, setUploadingAudio] = useState(false)
   const messagesEndRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const mediaStreamRef = useRef(null)
+  const audioChunksRef = useRef([])
+
+  const withSignedMedia = useCallback(async (message) => {
+    if (message?.message_type !== 'audio' || !message?.storage_path) return message
+    const { data, error } = await supabase.storage.from('communication-media').createSignedUrl(message.storage_path, 3600)
+    if (error || !data?.signedUrl) return message
+    return { ...message, media_url: data.signedUrl }
+  }, [])
 
   const refreshSidebar = useCallback(async (user) => {
     if (!user) return
@@ -52,20 +64,26 @@ export default function CommunicationPage() {
     if (!id) return
     const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true })
     if (error) { setStatus(error.message); return }
-    setMessages(data || [])
-  }, [])
+    const hydrated = await Promise.all((data || []).map(withSignedMedia))
+    setMessages(hydrated)
+  }, [withSignedMedia])
 
   useEffect(() => {
     if (!conversationId) return
     loadMessages(conversationId)
-    const channel = supabase.channel(`messages:${conversationId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload) => {
-      setMessages((current) => current.some((item) => item.id === payload.new.id) ? current : [...current, payload.new])
+    const channel = supabase.channel(`messages:${conversationId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, async (payload) => {
+      const nextMessage = await withSignedMedia(payload.new)
+      setMessages((current) => current.some((item) => item.id === nextMessage.id) ? current : [...current, nextMessage])
       if (me) refreshSidebar(me)
     }).subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [conversationId, loadMessages, me, refreshSidebar])
+  }, [conversationId, loadMessages, me, refreshSidebar, withSignedMedia])
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  useEffect(() => () => {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+  }, [])
 
   const visiblePeople = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -96,6 +114,76 @@ export default function CommunicationPage() {
     setText('')
     const { error } = await supabase.from('messages').insert({ conversation_id: conversationId, sender_id: me.id, body, message_type: 'text' })
     if (error) { setText(body); setStatus(error.message) }
+  }
+
+  async function startVoiceRecording() {
+    if (!activePerson || !conversationId || !me || recording || uploadingAudio) return
+    setStatus('')
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setStatus("L'enregistrement audio n'est pas supporté sur ce navigateur.")
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      audioChunksRef.current = []
+
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg']
+      const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported?.(type)) || ''
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) audioChunksRef.current.push(event.data)
+      }
+
+      recorder.onstop = async () => {
+        setRecording(false)
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+        mediaStreamRef.current = null
+
+        const actualType = recorder.mimeType || mimeType || 'audio/webm'
+        const baseType = actualType.split(';')[0]
+        const extension = baseType.includes('ogg') ? 'ogg' : baseType.includes('mpeg') ? 'mp3' : 'webm'
+        const blob = new Blob(audioChunksRef.current, { type: actualType })
+        audioChunksRef.current = []
+        if (!blob.size) { setStatus('Enregistrement audio vide. Réessayez.'); return }
+
+        setUploadingAudio(true)
+        const path = `${conversationId}/${me.id}/${Date.now()}.${extension}`
+        const { error: uploadError } = await supabase.storage.from('communication-media').upload(path, blob, { contentType: baseType, upsert: false })
+        if (uploadError) {
+          setUploadingAudio(false)
+          setStatus(`Audio: ${uploadError.message}`)
+          return
+        }
+
+        const { error: messageError } = await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          sender_id: me.id,
+          body: 'Message vocal',
+          message_type: 'audio',
+          storage_path: path,
+          media_url: null,
+        })
+        setUploadingAudio(false)
+        if (messageError) setStatus(`Message vocal: ${messageError.message}`)
+      }
+
+      recorder.start()
+      setRecording(true)
+    } catch (error) {
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+      mediaStreamRef.current = null
+      setRecording(false)
+      setStatus(error?.name === 'NotAllowedError' ? "Autorisez le microphone pour envoyer un message vocal." : `Microphone: ${error?.message || 'erreur inconnue'}`)
+    }
+  }
+
+  function stopVoiceRecording() {
+    const recorder = mediaRecorderRef.current
+    if (recorder && recorder.state !== 'inactive') recorder.stop()
   }
 
   async function signOut() { await supabase.auth.signOut(); router.replace('/') }
@@ -157,7 +245,18 @@ export default function CommunicationPage() {
             {messages.map((message) => { const mine = message.sender_id === me?.id; return <div className={`${styles.messageRow} ${mine ? styles.mine : ''}`} key={message.id}><div className={`${styles.bubble} ${mine ? styles.bubbleMine : ''}`}>{message.message_type === 'audio' && message.media_url ? <audio controls src={message.media_url} className={styles.audio} /> : <p>{message.body}</p>}<time>{formatTime(message.created_at)} {mine ? '✓✓' : ''}</time></div></div> })}
             {status && <div className={styles.status}>{status}</div>}<div ref={messagesEndRef} />
           </section>
-          <form className={styles.composer} onSubmit={sendMessage}><button type="button" disabled>☺</button><button type="button" disabled>⌕</button><input value={text} onChange={(e) => setText(e.target.value)} placeholder={activePerson ? 'Message' : 'Choisissez une conversation'} disabled={!activePerson} /><button type="button" disabled>📎</button><button type="button" disabled>📷</button><button type="submit" className={styles.send} disabled={!activePerson || !text.trim()}>➤</button></form>
+          <form className={styles.composer} onSubmit={sendMessage}>
+            <button type="button" disabled>☺</button>
+            <button type="button" disabled>⌕</button>
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={recording ? 'Enregistrement en cours…' : uploadingAudio ? 'Envoi du message vocal…' : activePerson ? 'Message' : 'Choisissez une conversation'} disabled={!activePerson || recording || uploadingAudio} />
+            <button type="button" disabled>📎</button>
+            <button type="button" disabled>📷</button>
+            {text.trim() ? (
+              <button type="submit" className={styles.send} disabled={!activePerson || uploadingAudio}>➤</button>
+            ) : (
+              <button type="button" className={`${styles.send} ${recording ? styles.recording : ''}`} onClick={recording ? stopVoiceRecording : startVoiceRecording} disabled={!activePerson || uploadingAudio} aria-label={recording ? 'Arrêter et envoyer' : 'Enregistrer un message vocal'}>{recording ? '■' : '🎙'}</button>
+            )}
+          </form>
         </main>
       </div>
     </div>
