@@ -1,4 +1,4 @@
-import './globals.css'
+<link rel="manifest" href="/manifest.json" />import './globals.css'
 
 export const metadata = {
   title: 'WakhReek -Onley Took',
