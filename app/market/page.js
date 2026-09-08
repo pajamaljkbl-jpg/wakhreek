@@ -118,7 +118,7 @@ export default function MarketPage() {
             <section className="market-card sell-card">
               <h3>Vendez sur WakhReek</h3>
               <p>Ouvrez votre boutique et commencez à vendre vos produits facilement.</p>
-              <button>Créer une boutique</button>
+              <button onClick={() => { window.location.href = '/market/create' }}>Créer une boutique</button>
             </section>
           </aside>
 
