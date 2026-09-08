@@ -1,0 +1,24 @@
+{
+  "name": "WakhReek",
+  "short_name": "WakhReek",
+  "description": "WakhReek - Onley Took Communication",
+  "start_url": "/communication",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0066ff",
+  "theme_color": "#0066ff",
+  "icons": [
+    {
+      "src": "/wakhreek-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/wakhreek-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
