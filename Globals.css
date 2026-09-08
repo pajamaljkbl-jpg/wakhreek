@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --blue-light-open: #2E90FF;
+  --orange: #FF6B00;
+  --black: #111111;
+}
+
+/* Header Fixed 162px - ما كيختفيش ملي تكرك */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+}
