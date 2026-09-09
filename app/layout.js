@@ -1,5 +1,6 @@
 import './globals.css'
 import PushRegistrar from './PushRegistrar'
+import CommunicationTvBand from '../components/CommunicationTvBand'
 
 export const metadata = {
   title: "WakhReek",
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
       <body>
         <PushRegistrar />
         {children}
+        <CommunicationTvBand />
       </body>
     </html>
   )
