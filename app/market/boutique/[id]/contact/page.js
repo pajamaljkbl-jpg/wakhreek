@@ -43,6 +43,10 @@ export default function BoutiqueContactPage(){
     await load()
   }
 
+  function showCallNotice(type){
+    setNotice(type==='video'?'📹 Appel vidéo — bouton visible des deux côtés, activation de la connexion en prochaine étape.':'📞 Appel audio — bouton visible des deux côtés, activation de la connexion en prochaine étape.')
+  }
+
   if(loading)return <AppShell><main className="contactPage"><div className="panel">Chargement...</div></main></AppShell>
   if(!boutique)return <AppShell><main className="contactPage"><div className="panel"><h2>Boutique indisponible</h2><button onClick={()=>router.push('/market')}>Retour au Marché</button></div></main></AppShell>
   const owner=boutique.owner_display_name||boutique.name
@@ -59,8 +63,8 @@ export default function BoutiqueContactPage(){
         <button disabled>📷<span>Photo</span></button>
         <button disabled>🎙️<span>Audio</span></button>
         <button disabled>🎥<span>Vidéo</span></button>
-        <button disabled>📞<span>Appel</span></button>
-        <button disabled>📹<span>Visio</span></button>
+        <button className="call" onClick={()=>showCallNotice('audio')}>📞<span>Appel</span></button>
+        <button className="call" onClick={()=>showCallNotice('video')}>📹<span>Visio</span></button>
       </div>
       <div className="thread">
         {!user?<div className="empty">Connectez-vous pour contacter cette boutique.</div>:messages.length===0?<div className="empty">Commencez la conversation avec la boutique.</div>:messages.map(m=><div key={m.id} className={`bubble ${m.sender_id===user.id?'mine':'theirs'}`}><p>{m.body}</p><small>{new Date(m.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div>)}
@@ -75,7 +79,7 @@ export default function BoutiqueContactPage(){
     .contactPage{min-height:calc(100vh - 140px);padding:20px;background:#eef3f9;display:flex;justify-content:center;align-items:flex-start;color:#172033}
     .phoneWindow{width:min(100%,620px);height:calc(100vh - 180px);min-height:580px;background:#fff;border:1px solid #d9e1ea;border-radius:22px;overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto auto;box-shadow:0 12px 30px rgba(15,40,80,.12)}
     .contactHeader{background:#0875e8;color:#fff;padding:13px 15px;display:flex;align-items:center;gap:11px}.back{background:transparent;border:0;color:#fff;font-size:25px;cursor:pointer}.avatar{width:48px;height:48px;border-radius:50%;background:#fff;overflow:hidden;display:grid;place-items:center}.avatar img{width:100%;height:100%;object-fit:cover}.who{display:grid}.who span{font-size:12px;opacity:.85}
-    .tools{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:9px;border-bottom:1px solid #e4e9ef;background:#f8fafc}.tools button{border:0;background:#eef3f8;border-radius:9px;padding:8px 4px;display:grid;gap:3px;place-items:center;font-size:18px}.tools button span{font-size:9px}.tools .active{background:#dcebff;color:#075dcc}.tools button:disabled{opacity:.45}
+    .tools{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:9px;border-bottom:1px solid #e4e9ef;background:#f8fafc}.tools button{border:0;background:#eef3f8;border-radius:9px;padding:8px 4px;display:grid;gap:3px;place-items:center;font-size:18px}.tools button span{font-size:9px}.tools .active{background:#dcebff;color:#075dcc}.tools .call{background:#e7f7ed;color:#176b3a;cursor:pointer;font-weight:800}.tools button:disabled{opacity:.45}
     .thread{padding:15px;overflow-y:auto;background:#f5f7fa;display:flex;flex-direction:column;gap:9px}.empty{margin:auto;color:#667085;text-align:center}.bubble{max-width:78%;padding:9px 11px;border-radius:13px}.bubble p{margin:0;white-space:pre-wrap}.bubble small{display:block;margin-top:4px;font-size:9px;color:#667085}.mine{align-self:flex-end;background:#dcebff}.theirs{align-self:flex-start;background:#fff;border:1px solid #e0e6ed}
     .composer{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px;border-top:1px solid #e4e9ef;background:#fff}.composer textarea{resize:none;min-height:45px;max-height:110px;border:1px solid #ccd5e2;border-radius:12px;padding:10px;font:inherit}.composer button,.panel button{border:0;border-radius:10px;background:#0875e8;color:#fff;font-weight:800;padding:0 15px;cursor:pointer}.notice{margin:0;padding:8px 12px;background:#fff4e5;color:#8a5200;font-size:12px}
     .panel{background:#fff;padding:20px;border-radius:14px}
