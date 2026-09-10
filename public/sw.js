@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakhreek-v3-whatsapp';
+const CACHE_NAME = 'wakhreek-v4-direct-communication';
 
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
