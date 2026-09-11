@@ -5,8 +5,6 @@ import {useRouter} from 'next/navigation'
 import {supabase} from '../../lib/supabase'
 import styles from './communication.module.css'
 
-const VAPID_PUBLIC_KEY = "BAaIzBNTHgNIiJF6-kX4Lf9nvhOsQqiiohQdJJyFKb1jkT4dVbOLmTyqtA5h1B_QwqVeHaiNYjgohVq_UIe2L2M";
-
 export default function CommunicationPage(){
  const router=useRouter()
  const [me,setMe]=useState(null),[people,setPeople]=useState([]),[friendIds,setFriendIds]=useState(new Set()),[incomingRequests,setIncomingRequests]=useState([]),[outgoingRequests,setOutgoingRequests]=useState([]),[conversationMeta,setConversationMeta]=useState({}),[activePerson,setActivePerson]=useState(null),[conversationId,setConversationId]=useState(null),[messages,setMessages]=useState([]),[receipts,setReceipts]=useState({}),[text,setText]=useState(''),[filter,setFilter]=useState('toutes'),[status,setStatus]=useState(''),[recording,setRecording]=useState(false),[uploadingAudio,setUploadingAudio]=useState(false),[uploadingImage,setUploadingImage]=useState(false),[friendBox,setFriendBox]=useState(false),[phoneSearch,setPhoneSearch]=useState(''),[phoneResults,setPhoneResults]=useState([]),[phoneBusy,setPhoneBusy]=useState(false),[incomingCall,setIncomingCall]=useState(null),[currentCall,setCurrentCall]=useState(null),[callState,setCallState]=useState(''),[localStream,setLocalStream]=useState(null),[remoteStream,setRemoteStream]=useState(null)
@@ -15,37 +13,7 @@ export default function CommunicationPage(){
  const withSignedMedia=useCallback(async m=>{if(!['audio','image'].includes(m?.message_type)||!m?.storage_path)return m;const{data,error}=await supabase.storage.from('communication-media').createSignedUrl(m.storage_path,3600);if(error)return m;return data?.signedUrl?{...m,media_url:data.signedUrl}:m},[])
  const refreshSidebar=useCallback(async user=>{if(!user)return;const[{data:foundPeople,error:pe},{data:fr,error:fe},{data:req,error:re},{data:members,error:me2}]=await Promise.all([supabase.rpc('find_people',{search_text:''}),supabase.from('friends').select('friend_id'),supabase.from('friend_requests').select('id,sender_id,receiver_id,status,created_at').eq('status','pending').order('created_at',{ascending:false}),supabase.from('conversation_members').select('conversation_id,user_id')]);if(pe||fe||re||me2){setStatus((pe||fe||re||me2).message);return}setPeople(foundPeople||[]);setFriendIds(new Set((fr||[]).map(x=>x.friend_id)));setIncomingRequests((req||[]).filter(x=>x.receiver_id===user.id));setOutgoingRequests((req||[]).filter(x=>x.sender_id===user.id));const map=new Map();(members||[]).forEach(x=>{if(x.user_id!==user.id)map.set(x.conversation_id,x.user_id)});const ids=[...map.keys()];if(!ids.length){setConversationMeta({});return}const{data:latest}=await supabase.from('messages').select('conversation_id,body,message_type,created_at').in('conversation_id',ids).order('created_at',{ascending:false});const lm=new Map();(latest||[]).forEach(x=>{if(!lm.has(x.conversation_id))lm.set(x.conversation_id,x)});const meta={};map.forEach((uid,id)=>meta[uid]={id,latest:lm.get(id)||null});setConversationMeta(meta)},[])
 
- async function registerPWAAndPush(user){
-  try{
-    if(typeof window==='undefined')return;
-    if(!('serviceWorker' in navigator) || !('PushManager' in window))return;
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    const perm = await Notification.requestPermission();
-    if(perm!=='granted')return;
-    const urlBase64ToUint8Array = (base64String) => {
-      const padding = '='.repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for(let i=0;i<rawData.length;++i)outputArray[i]=rawData.charCodeAt(i);
-      return outputArray;
-    };
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-    }
-    await supabase.from('push_subscriptions').upsert({
-      user_id: user.id,
-      subscription: sub.toJSON()
-    }, { onConflict: 'user_id' });
-    console.log('Push registered');
-  }catch(e){ console.log('Push error', e); }
- }
-
- useEffect(()=>{supabase.auth.getUser().then(({data,error})=>{if(error||!data?.user){router.replace('/');return}setMe(data.user);refreshSidebar(data.user);registerPWAAndPush(data.user)})},[router,refreshSidebar])
+ useEffect(()=>{supabase.auth.getUser().then(({data,error})=>{if(error||!data?.user){router.replace('/');return}setMe(data.user);refreshSidebar(data.user)})},[router,refreshSidebar])
  const loadMessages=useCallback(async id=>{const{data,error}=await supabase.from('messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});if(error){setStatus(error.message);return}const old=new Map(messagesRef.current.map(m=>[m.id,m]));const next=await Promise.all((data||[]).map(m=>old.get(m.id)?.media_url?{...m,media_url:old.get(m.id).media_url}:withSignedMedia(m)));messagesRef.current=next;setMessages(next)},[withSignedMedia])
  useEffect(()=>{if(!conversationId)return;loadMessages(conversationId);const ch=supabase.channel(`messages:${conversationId}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`conversation_id=eq.${conversationId}`},async p=>{const m=await withSignedMedia(p.new);setMessages(c=>{if(c.some(x=>x.id===m.id))return c;const next=[...c,m];messagesRef.current=next;return next});if(me)refreshSidebar(me)}).subscribe();const timer=setInterval(()=>loadMessages(conversationId),3000);const onVisible=()=>{if(document.visibilityState==='visible')loadMessages(conversationId)};document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible);supabase.removeChannel(ch)}},[conversationId,loadMessages,me,refreshSidebar,withSignedMedia])
  useEffect(()=>{if(!me||!conversationId||!messages.length){setReceipts({});return}let cancelled=false;async function syncReceipts(){const incoming=messages.filter(m=>m.sender_id!==me.id);if(incoming.length){await Promise.all(incoming.map(m=>supabase.rpc('mark_message_delivered',{p_message_id:m.id})));if(document.visibilityState==='visible')await supabase.rpc('mark_conversation_read',{p_conversation_id:conversationId})}const ids=messages.map(m=>m.id);const{data,error}=await supabase.from('message_receipts').select('message_id,user_id,delivered_at,read_at').in('message_id',ids);if(cancelled)return;if(error){setStatus(error.message);return}const map={};(data||[]).forEach(r=>{if(r.user_id!==me.id)map[r.message_id]=r});setReceipts(map)}syncReceipts();const timer=setInterval(syncReceipts,3000);const onVisible=()=>{if(document.visibilityState==='visible')syncReceipts()};document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);return()=>{cancelled=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)}},[me,conversationId,messages])
