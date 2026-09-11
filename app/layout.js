@@ -3,7 +3,7 @@ import PushRegistrar from './PushRegistrar'
 import CommunicationTvBand from '../components/CommunicationTvBand'
 import OutgoingCallTone from '../components/OutgoingCallTone'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import AutoTranslator from '../components/AutoTranslator'
+import PlatformTranslator from '../components/PlatformTranslator'
 
 export const metadata = {
   title: "WakhReek",
@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
         {children}
         <CommunicationTvBand />
         <OutgoingCallTone />
-        <AutoTranslator />
+        <PlatformTranslator />
         <LanguageSwitcher />
       </body>
     </html>
