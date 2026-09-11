@@ -1,23 +1,23 @@
-const CACHE_NAME = 'wakhreek-v4-direct-communication';
+const CACHE_NAME = 'wakhreek-v5-incoming-call-screen';
 
-self.addEventListener('install', (e) => { self.skipWaiting(); });
-self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); });
+self.addEventListener('install', () => { self.skipWaiting(); });
+self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });
 
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; }
   catch (e) {
     try { data = JSON.parse(event.data.text()); }
-    catch { data = { title: 'WakhReek', body: 'Appel entrant', call_id: Date.now() }; }
+    catch { data = { title: 'WakhReek', body: 'Appel entrant', call_id: '' }; }
   }
 
   const title = data.title || 'WakhReek';
   const body = data.body || (data.caller_name ? data.caller_name + ' vous appelle...' : 'Appel entrant WakhReek');
   const callId = data.call_id || '';
-  const incomingUrl = '/communication?call_id=' + callId + '&incoming=1&autowake=1';
+  const incomingUrl = '/communication?call_id=' + encodeURIComponent(callId) + '&incoming=1';
 
   const options = {
-    body: body,
+    body,
     icon: '/wakhreek-logo.svg',
     badge: '/wakhreek-logo.svg',
     tag: 'call-' + callId,
@@ -25,58 +25,55 @@ self.addEventListener('push', (event) => {
     requireInteraction: true,
     vibrate: [500,200,500,200,1000,300,500],
     silent: false,
-    data: { call_id: callId, url: incomingUrl },
-    actions: [
-      { action: 'accept', title: '✅ Accepter' },
-      { action: 'reject', title: '❌ Refuser' }
-    ]
+    data: { call_id: callId, url: incomingUrl }
   };
 
   event.waitUntil((async () => {
     await self.registration.showNotification(title, options);
+
+    // Best effort only: mobile operating systems may refuse automatic foregrounding.
+    // If WakhReek is already open, wake/navigate that client so the in-app
+    // Accept / Reject screen can be displayed by Communication.
     try {
       const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-      if (allClients.length > 0) {
-        for (const client of allClients) {
-          try {
-            if ('focus' in client) await client.focus();
-            client.postMessage({ type: 'INCOMING_CALL_WAKE', call_id: callId, caller_name: data.caller_name, call_type: data.call_type });
-          } catch(e){}
-        }
-        if (allClients[0] && 'navigate' in allClients[0]) {
-          try { await allClients[0].navigate(incomingUrl); } catch(e){}
-        }
-      } else {
-        await clients.openWindow(incomingUrl);
+      for (const client of allClients) {
+        try {
+          client.postMessage({
+            type: 'INCOMING_CALL_WAKE',
+            call_id: callId,
+            caller_name: data.caller_name,
+            call_type: data.call_type
+          });
+          if ('navigate' in client) await client.navigate(incomingUrl);
+        } catch (_) {}
       }
-    } catch (err) {
-      console.log('Auto-wake failed, fallback to notification only', err);
-    }
+    } catch (_) {}
   })());
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const action = event.action;
   const data = event.notification.data || {};
-  const url = data.url || '/communication';
+  const callId = data.call_id || '';
+  const url = data.url || ('/communication?call_id=' + encodeURIComponent(callId) + '&incoming=1');
 
-  if (action === 'reject') {
-    event.waitUntil(fetch('/api/call-reject?call_id=' + data.call_id, { method: 'POST' }).catch(()=>{}));
-    return;
-  }
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const client of list) {
-        if (client.url.includes('/communication')) {
-          client.postMessage({ type: 'ACCEPT_CALL', call_id: data.call_id });
-          return client.focus();
-        }
+  // Do not try to accept/reject WebRTC inside the service worker. Media permission
+  // and WebRTC must stay in the foreground app. A tap always opens/focuses the
+  // Communication screen where the user gets the real Accept / Reject controls.
+  event.waitUntil((async () => {
+    const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of list) {
+      if (client.url.includes('/communication')) {
+        try {
+          if ('navigate' in client) await client.navigate(url);
+          client.postMessage({ type: 'INCOMING_CALL_WAKE', call_id: callId });
+          if ('focus' in client) await client.focus();
+          return;
+        } catch (_) {}
       }
-      return clients.openWindow(url);
-    })
-  );
+    }
+    await clients.openWindow(url);
+  })());
 });
 
 self.addEventListener('message', (event) => {
