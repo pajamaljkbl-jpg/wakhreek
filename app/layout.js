@@ -4,6 +4,7 @@ import CommunicationTvBand from '../components/CommunicationTvBand'
 import OutgoingCallTone from '../components/OutgoingCallTone'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import PlatformTranslator from '../components/PlatformTranslator'
+import LanguageProofreader from '../components/LanguageProofreader'
 
 export const metadata = {
   title: "WakhReek",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
         <CommunicationTvBand />
         <OutgoingCallTone />
         <PlatformTranslator />
+        <LanguageProofreader />
         <LanguageSwitcher />
       </body>
     </html>
