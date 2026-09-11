@@ -6,7 +6,11 @@ const VAPID_PUBLIC_KEY = "BAaIzBNTHgNIiJF6-kX4Lf9nvhOsQqiiohQdJJyFKb1jkT4dVbOLmT
 
 export default function PushRegistrar() {
   useEffect(() => {
+    let registrationInFlight = false;
+
     async function registerPWAAndPush(user) {
+      if (registrationInFlight) return;
+      registrationInFlight = true;
       try {
         if (typeof window === 'undefined') return;
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -31,20 +35,46 @@ export default function PushRegistrar() {
         const payload = sub.toJSON();
         if (!payload?.endpoint) return;
 
-        // Keep one row per browser/device endpoint without replacing the user's other devices.
-        await supabase
+        // Keep the existing row for this browser/device and refresh its payload.
+        // This avoids delete+insert races while preserving the user's other devices.
+        const { data: existing, error: lookupError } = await supabase
           .from('push_subscriptions')
-          .delete()
+          .select('id')
           .eq('user_id', user.id)
-          .contains('subscription', { endpoint: payload.endpoint });
+          .contains('subscription', { endpoint: payload.endpoint })
+          .limit(1)
+          .maybeSingle();
+
+        if (lookupError) {
+          console.log('Push lookup error', lookupError);
+          return;
+        }
+
+        if (existing?.id) {
+          const { error } = await supabase
+            .from('push_subscriptions')
+            .update({ subscription: payload })
+            .eq('id', existing.id)
+            .eq('user_id', user.id);
+          if (error) console.log('Push save error', error);
+          else console.log('Push global refreshed');
+          return;
+        }
 
         const { error } = await supabase.from('push_subscriptions').insert({
           user_id: user.id,
           subscription: payload
         });
-        if (error) console.log('Push save error', error);
+
+        // A concurrent auth event may have inserted the same endpoint first.
+        // The unique index is then doing its job, so do not surface it as an app error.
+        if (error && error.code !== '23505') console.log('Push save error', error);
         else console.log('Push global registered');
-      } catch (e) { console.log('Push error', e); }
+      } catch (e) {
+        console.log('Push error', e);
+      } finally {
+        registrationInFlight = false;
+      }
     }
 
     supabase.auth.getUser().then(({ data }) => {
