@@ -28,11 +28,22 @@ export default function PushRegistrar() {
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
           });
         }
-        await supabase.from('push_subscriptions').upsert({
+        const payload = sub.toJSON();
+        if (!payload?.endpoint) return;
+
+        // Keep one row per browser/device endpoint without replacing the user's other devices.
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('user_id', user.id)
+          .contains('subscription', { endpoint: payload.endpoint });
+
+        const { error } = await supabase.from('push_subscriptions').insert({
           user_id: user.id,
-          subscription: sub.toJSON()
-        }, { onConflict: 'user_id' });
-        console.log('Push global registered');
+          subscription: payload
+        });
+        if (error) console.log('Push save error', error);
+        else console.log('Push global registered');
       } catch (e) { console.log('Push error', e); }
     }
 
