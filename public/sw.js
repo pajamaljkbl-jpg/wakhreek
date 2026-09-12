@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakhreek-v5-incoming-call-screen';
+const CACHE_NAME = 'wakhreek-v6-single-incoming-call-screen';
 
 self.addEventListener('install', () => { self.skipWaiting(); });
 self.addEventListener('activate', (event) => { event.waitUntil(clients.claim()); });
@@ -31,9 +31,9 @@ self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     await self.registration.showNotification(title, options);
 
-    // Best effort only: mobile operating systems may refuse automatic foregrounding.
-    // If WakhReek is already open, wake/navigate that client so the in-app
-    // Accept / Reject screen can be displayed by Communication.
+    // Wake an already-open WakhReek client without navigating/reloading it.
+    // The foreground Communication page owns the real Accept / Reject UI.
+    // Navigating here can race with that UI and make the same call appear twice.
     try {
       const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of allClients) {
@@ -44,7 +44,6 @@ self.addEventListener('push', (event) => {
             caller_name: data.caller_name,
             call_type: data.call_type
           });
-          if ('navigate' in client) await client.navigate(incomingUrl);
         } catch (_) {}
       }
     } catch (_) {}
@@ -57,15 +56,13 @@ self.addEventListener('notificationclick', (event) => {
   const callId = data.call_id || '';
   const url = data.url || ('/communication?call_id=' + encodeURIComponent(callId) + '&incoming=1');
 
-  // Do not try to accept/reject WebRTC inside the service worker. Media permission
-  // and WebRTC must stay in the foreground app. A tap always opens/focuses the
-  // Communication screen where the user gets the real Accept / Reject controls.
+  // WebRTC acceptance/rejection stays in the foreground app. A notification tap
+  // only focuses or opens Communication, where the user gets one Accept / Reject screen.
   event.waitUntil((async () => {
     const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of list) {
       if (client.url.includes('/communication')) {
         try {
-          if ('navigate' in client) await client.navigate(url);
           client.postMessage({ type: 'INCOMING_CALL_WAKE', call_id: callId });
           if ('focus' in client) await client.focus();
           return;
