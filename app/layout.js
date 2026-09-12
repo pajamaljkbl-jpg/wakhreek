@@ -3,8 +3,6 @@ import PushRegistrar from './PushRegistrar'
 import CommunicationTvBand from '../components/CommunicationTvBand'
 import OutgoingCallTone from '../components/OutgoingCallTone'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import PlatformTranslator from '../components/PlatformTranslator'
-import LanguageProofreader from '../components/LanguageProofreader'
 import I18nProvider from '../components/I18nProvider'
 
 export const metadata = {
@@ -23,8 +21,6 @@ export default function RootLayout({ children }) {
           {children}
           <CommunicationTvBand />
           <OutgoingCallTone />
-          <PlatformTranslator />
-          <LanguageProofreader />
           <LanguageSwitcher />
         </I18nProvider>
       </body>
