@@ -8,6 +8,14 @@ export default function PushRegistrar() {
   useEffect(() => {
     let registrationInFlight = false;
 
+    // Register the PWA service worker for every visitor, even before login.
+    // Push notification subscription remains limited to authenticated users below.
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((e) => {
+        console.log('Service worker registration error', e);
+      });
+    }
+
     async function registerPWAAndPush(user) {
       if (registrationInFlight) return;
       registrationInFlight = true;
