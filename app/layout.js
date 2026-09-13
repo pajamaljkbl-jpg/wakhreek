@@ -8,7 +8,7 @@ import I18nProvider from '../components/I18nProvider'
 export const metadata = {
   title: "WakhReek",
   description: "WakhReek - Onley Took Communication",
-  manifest: "/manifest.json?v=20260913-2",
+  manifest: "/manifest.json?v=20260913-3",
   themeColor: "#0066ff",
 }
 
