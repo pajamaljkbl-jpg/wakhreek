@@ -13,13 +13,13 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/wakhreek-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/wakhreek-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/wakhreek-logo.png",
+      "src": "/wakhreek-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
