@@ -1,12 +1,17 @@
 {
+  "id": "/",
   "name": "WakhReek",
   "short_name": "WakhReek",
-  "description": "WakhReek - Onley Took Communication",
+  "description": "WakhReek - Boutiques, Messagerie, Communauté",
   "start_url": "/communication",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
   "background_color": "#0066ff",
   "theme_color": "#0066ff",
+  "categories": ["social", "shopping", "business"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/wakhreek-logo.svg",
