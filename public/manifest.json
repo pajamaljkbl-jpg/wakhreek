@@ -13,12 +13,6 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/wakhreek-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
       "src": "/wakhreek-logo.png",
       "sizes": "512x512",
       "type": "image/png",
