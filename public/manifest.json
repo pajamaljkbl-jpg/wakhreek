@@ -6,7 +6,6 @@
   "start_url": "/communication",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
   "background_color": "#0066ff",
   "theme_color": "#0066ff",
