@@ -9,6 +9,9 @@ on:
       - 'public/wakhreek-512-v2.png'
       - '.github/workflows/android-test-apk.yml'
 
+permissions:
+  contents: write
+
 jobs:
   debug-build:
     runs-on: ubuntu-latest
@@ -77,3 +80,20 @@ jobs:
             android-app/app/build/outputs/apk/release/app-release.apk
             android-app/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+      - name: Publish signed APK to main
+        if: steps.signing.outputs.ready == 'true' && github.event_name == 'push' && contains(github.event.head_commit.message, '[publish-apk]')
+        shell: bash
+        run: |
+          cp android-app/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/WakhReek-Android-1.0.0.apk"
+          git fetch origin main
+          git checkout main
+          cp "$RUNNER_TEMP/WakhReek-Android-1.0.0.apk" public/WakhReek-Android-1.0.0.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/WakhReek-Android-1.0.0.apk
+          if git diff --cached --quiet; then
+            echo "APK already published on main."
+            exit 0
+          fi
+          git commit -m "release: publish WakhReek Android 1.0.0 APK"
+          git push origin HEAD:main
