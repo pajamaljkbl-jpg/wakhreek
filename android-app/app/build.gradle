@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.wakhreek.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.wakhreek.app"
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName "0.1-test"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+// Reuse the exact official WakhReek icon already stored in /public.
+// This copies pixels only; it does not redesign or alter the icon.
+tasks.register('copyWakhreekIcon', Copy) {
+    from("${rootProject.projectDir}/../public/wakhreek-512-v2.png")
+    into("${projectDir}/src/main/res/drawable")
+    rename { 'wakhreek_icon.png' }
+}
+
+preBuild.dependsOn(copyWakhreekIcon)
