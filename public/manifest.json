@@ -3,7 +3,7 @@
   "name": "WakhReek",
   "short_name": "WakhReek",
   "description": "WakhReek - Boutiques, Messagerie, Communauté",
-  "start_url": "/communication",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
