@@ -5,183 +5,88 @@ import { useRouter } from 'next/navigation'
 import AppShell from '../../../components/AppShell'
 import { supabase } from '../../../lib/supabase'
 
+const TERMS_VERSION = '2026-09-14-v1'
+
 export default function CreateBoutiquePage() {
   const router = useRouter()
-  const [countries, setCountries] = useState([])
-  const [cities, setCities] = useState([])
-  const [plans, setPlans] = useState([])
-  const [pricingConfig, setPricingConfig] = useState([])
-  const [paymentMethods, setPaymentMethods] = useState([])
-  const [countryPaymentMethods, setCountryPaymentMethods] = useState([])
-  const [paymentMethodCode, setPaymentMethodCode] = useState('')
-  const [usdXofRate, setUsdXofRate] = useState(null)
-  const [usdXofRateAt, setUsdXofRateAt] = useState(null)
-  const [countryId, setCountryId] = useState('')
-  const [cityId, setCityId] = useState('')
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState('les_deux')
-  const [planCode, setPlanCode] = useState('eco_15')
-  const [featureMode, setFeatureMode] = useState('rent')
-  const [stockMode, setStockMode] = useState('optional')
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
+  const [countries,setCountries]=useState([]), [cities,setCities]=useState([]), [plans,setPlans]=useState([])
+  const [pricingConfig,setPricingConfig]=useState([]), [paymentMethods,setPaymentMethods]=useState([]), [countryPaymentMethods,setCountryPaymentMethods]=useState([])
+  const [paymentMethodCode,setPaymentMethodCode]=useState(''), [usdXofRate,setUsdXofRate]=useState(null), [usdXofRateAt,setUsdXofRateAt]=useState(null)
+  const [countryId,setCountryId]=useState(''), [cityId,setCityId]=useState(''), [name,setName]=useState(''), [description,setDescription]=useState('')
+  const [type,setType]=useState('les_deux'), [planCode,setPlanCode]=useState('eco_15'), [featureMode,setFeatureMode]=useState('rent'), [stockMode,setStockMode]=useState('optional')
+  const [legalName,setLegalName]=useState(''), [documentType,setDocumentType]=useState('id_card'), [documentNumber,setDocumentNumber]=useState(''), [legalDocument,setLegalDocument]=useState(null), [termsAccepted,setTermsAccepted]=useState(false)
+  const [saving,setSaving]=useState(false), [message,setMessage]=useState('')
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: c }, { data: v }, { data: p }, { data: pc }, { data: fx }, { data: pm }, { data: cpm }] = await Promise.all([
-        supabase.from('countries').select('id,code,name_fr,flag_emoji,market_region').order('name_fr'),
-        supabase.from('cities').select('id,country_id,name').order('name'),
-        supabase.from('boutique_plan_catalog').select('code,name_fr,product_limit,monthly_rent_cfa,monthly_with_ads_cfa,monthly_with_ai_cfa,includes_ads,includes_ai,target_segment,all_features').eq('is_active', true).order('id'),
-        supabase.from('market_pricing_config').select('country_code,pricing_mode,billing_currency,reference_country_code').eq('is_active', true),
-        supabase.from('market_exchange_rates').select('rate,effective_at').eq('base_currency', 'USD').eq('quote_currency', 'XOF').eq('is_active', true).maybeSingle(),
-        supabase.from('market_payment_methods').select('code,name,payment_type').eq('is_active', true).order('sort_order'),
-        supabase.from('market_country_payment_methods').select('country_code,payment_method_code,sort_order').eq('is_active', true).order('sort_order'),
-      ])
-      setCountries(c || [])
-      setCities(v || [])
-      setPlans(p || [])
-      setPricingConfig(pc || [])
-      setPaymentMethods(pm || [])
-      setCountryPaymentMethods(cpm || [])
-      if (fx?.rate) {
-        setUsdXofRate(Number(fx.rate))
-        setUsdXofRateAt(fx.effective_at || null)
-      }
-      const morocco = (c || []).find(x => x.code === 'MAR') || (c || [])[0]
-      if (morocco) setCountryId(morocco.id)
-    }
-    load()
-  }, [])
+  useEffect(()=>{(async()=>{
+    const [{data:c},{data:v},{data:p},{data:pc},{data:fx},{data:pm},{data:cpm}]=await Promise.all([
+      supabase.from('countries').select('id,code,name_fr,flag_emoji,market_region').order('name_fr'),
+      supabase.from('cities').select('id,country_id,name').order('name'),
+      supabase.from('boutique_plan_catalog').select('code,name_fr,product_limit,monthly_rent_cfa,monthly_with_ads_cfa,monthly_with_ai_cfa,includes_ads,includes_ai,target_segment,all_features').eq('is_active',true).order('id'),
+      supabase.from('market_pricing_config').select('country_code,pricing_mode,billing_currency,reference_country_code').eq('is_active',true),
+      supabase.from('market_exchange_rates').select('rate,effective_at').eq('base_currency','USD').eq('quote_currency','XOF').eq('is_active',true).maybeSingle(),
+      supabase.from('market_payment_methods').select('code,name,payment_type').eq('is_active',true).order('sort_order'),
+      supabase.from('market_country_payment_methods').select('country_code,payment_method_code,sort_order').eq('is_active',true).order('sort_order')])
+    setCountries(c||[]);setCities(v||[]);setPlans(p||[]);setPricingConfig(pc||[]);setPaymentMethods(pm||[]);setCountryPaymentMethods(cpm||[])
+    if(fx?.rate){setUsdXofRate(Number(fx.rate));setUsdXofRateAt(fx.effective_at||null)}
+    const first=(c||[]).find(x=>x.code==='SEN')||(c||[]).find(x=>x.code==='MAR')||(c||[])[0];if(first)setCountryId(first.id)
+  })()},[])
 
-  const cityOptions = useMemo(() => cities.filter(x => x.country_id === countryId), [cities,countryId])
-  useEffect(() => {
-    if (!cityOptions.some(x => x.id === cityId)) setCityId(cityOptions[0]?.id || '')
-  }, [cityOptions,cityId])
+  const cityOptions=useMemo(()=>cities.filter(x=>x.country_id===countryId),[cities,countryId])
+  useEffect(()=>{if(!cityOptions.some(x=>x.id===cityId))setCityId(cityOptions[0]?.id||'')},[cityOptions,cityId])
+  const selectedCountry=useMemo(()=>countries.find(c=>c.id===countryId),[countries,countryId])
+  const selectedPricing=useMemo(()=>pricingConfig.find(p=>p.country_code===selectedCountry?.code),[pricingConfig,selectedCountry])
+  const selectedPlan=useMemo(()=>plans.find(p=>p.code===planCode)||plans[0],[plans,planCode])
+  const isCompany=selectedPlan?.target_segment==='company'||selectedPlan?.all_features
+  const availablePaymentMethods=useMemo(()=>{if(!selectedCountry)return[];return countryPaymentMethods.filter(x=>x.country_code===selectedCountry.code).map(x=>paymentMethods.find(m=>m.code===x.payment_method_code)).filter(Boolean)},[selectedCountry,countryPaymentMethods,paymentMethods])
+  useEffect(()=>{if(!availablePaymentMethods.some(x=>x.code===paymentMethodCode))setPaymentMethodCode(availablePaymentMethods[0]?.code||'')},[availablePaymentMethods,paymentMethodCode])
+  const selectedPaymentMethod=useMemo(()=>availablePaymentMethods.find(x=>x.code===paymentMethodCode),[availablePaymentMethods,paymentMethodCode])
+  useEffect(()=>{if(isCompany)setFeatureMode('ai')},[isCompany])
+  const monthlyPrice=useMemo(()=>{if(!selectedPlan)return 0;if(isCompany||featureMode==='ai')return Number(selectedPlan.monthly_with_ai_cfa||selectedPlan.monthly_rent_cfa||0);if(featureMode==='ads')return Number(selectedPlan.monthly_with_ads_cfa||selectedPlan.monthly_rent_cfa||0);return Number(selectedPlan.monthly_rent_cfa||0)},[selectedPlan,featureMode,isCompany])
+  const billingCurrency=selectedPricing?.billing_currency||null
+  const billingAmount=useMemo(()=>{if(!selectedPricing)return null;if(billingCurrency==='XOF')return monthlyPrice;if(billingCurrency==='USD'&&usdXofRate)return Number((monthlyPrice/usdXofRate).toFixed(2));return null},[selectedPricing,billingCurrency,monthlyPrice,usdXofRate])
+  const hasAds=isCompany||featureMode==='ads'||featureMode==='ai', hasAi=isCompany||featureMode==='ai'
+  const formatBilling=a=>{const amount=Number(a||0);if(!selectedPricing)return'Tarif WakhReek à configurer';if(billingCurrency==='XOF')return`${amount.toLocaleString('fr-FR')} CFA`;if(billingCurrency==='USD'&&usdXofRate)return`$${(amount/usdXofRate).toFixed(2)} USD`;return'Tarif WakhReek à configurer'}
 
-  const selectedCountry = useMemo(() => countries.find(c => c.id === countryId), [countries, countryId])
-  const selectedPricing = useMemo(() => pricingConfig.find(p => p.country_code === selectedCountry?.code), [pricingConfig, selectedCountry])
-  const selectedPlan = useMemo(() => plans.find(p => p.code === planCode) || plans[0], [plans, planCode])
-  const isCompany = selectedPlan?.target_segment === 'company' || selectedPlan?.all_features
-
-  const availablePaymentMethods = useMemo(() => {
-    if (!selectedCountry) return []
-    const mappings = countryPaymentMethods.filter(x => x.country_code === selectedCountry.code)
-    return mappings.map(mapping => paymentMethods.find(method => method.code === mapping.payment_method_code)).filter(Boolean)
-  }, [selectedCountry, countryPaymentMethods, paymentMethods])
-
-  useEffect(() => {
-    if (!availablePaymentMethods.some(x => x.code === paymentMethodCode)) setPaymentMethodCode(availablePaymentMethods[0]?.code || '')
-  }, [availablePaymentMethods, paymentMethodCode])
-
-  const selectedPaymentMethod = useMemo(() => availablePaymentMethods.find(x => x.code === paymentMethodCode), [availablePaymentMethods, paymentMethodCode])
-
-  useEffect(() => { if (isCompany) setFeatureMode('ai') }, [isCompany])
-
-  const monthlyPrice = useMemo(() => {
-    if (!selectedPlan) return 0
-    if (isCompany || featureMode === 'ai') return Number(selectedPlan.monthly_with_ai_cfa || selectedPlan.monthly_rent_cfa || 0)
-    if (featureMode === 'ads') return Number(selectedPlan.monthly_with_ads_cfa || selectedPlan.monthly_rent_cfa || 0)
-    return Number(selectedPlan.monthly_rent_cfa || 0)
-  }, [selectedPlan, featureMode, isCompany])
-
-  const billingCurrency = selectedPricing?.billing_currency || null
-  const billingAmount = useMemo(() => {
-    if (!selectedPricing) return null
-    if (billingCurrency === 'XOF') return monthlyPrice
-    if (billingCurrency === 'USD' && usdXofRate) return Number((monthlyPrice / usdXofRate).toFixed(2))
-    return null
-  }, [selectedPricing, billingCurrency, monthlyPrice, usdXofRate])
-
-  const hasAds = isCompany || featureMode === 'ads' || featureMode === 'ai'
-  const hasAi = isCompany || featureMode === 'ai'
-
-  function formatBilling(cfaAmount) {
-    const amount = Number(cfaAmount || 0)
-    if (!selectedPricing) return 'Tarif WakhReek à configurer'
-    if (billingCurrency === 'XOF') return `${amount.toLocaleString('fr-FR')} CFA`
-    if (billingCurrency === 'USD' && usdXofRate) return `$${(amount / usdXofRate).toFixed(2)} USD`
-    return 'Tarif WakhReek à configurer'
-  }
-
-  async function submit(e) {
-    e.preventDefault()
-    setMessage('')
-    if (!name.trim() || !countryId || !cityId || !selectedPlan || !selectedCountry) return setMessage('Complétez le nom, le pays, la ville et la formule.')
-    if (selectedPricing && billingCurrency === 'USD' && (!usdXofRate || billingAmount == null)) return setMessage('Le taux de conversion USD est indisponible. Réessayez dans un instant.')
+  async function submit(e){
+    e.preventDefault();setMessage('')
+    if(!name.trim()||!countryId||!cityId||!selectedPlan||!selectedCountry)return setMessage('Complétez le nom, le pays, la ville et la formule.')
+    if(!legalName.trim()||!documentNumber.trim()||!legalDocument)return setMessage('Complétez les informations du responsable et joignez le document justificatif.')
+    if(!termsAccepted)return setMessage('Vous devez lire et accepter le contrat WakhReek avant d’envoyer la demande.')
+    if(legalDocument.size>10*1024*1024)return setMessage('Le document ne doit pas dépasser 10 Mo.')
+    if(selectedPricing&&billingCurrency==='USD'&&(!usdXofRate||billingAmount==null))return setMessage('Le taux de conversion USD est indisponible. Réessayez dans un instant.')
     setSaving(true)
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); setMessage('Connectez-vous avant de créer une boutique.'); return }
-
-    const { data: boutique, error: boutiqueError } = await supabase.from('boutiques').insert({
-      user_id: user.id,
-      country_id: countryId,
-      city_id: cityId,
-      name: name.trim(),
-      description: description.trim() || null,
-      type,
-      plan: selectedPlan.code,
-      product_count_limit: selectedPlan.product_limit,
-      has_ads: hasAds,
-      has_ai_agent: hasAi,
-      is_live: false,
-    }).select('id').single()
-
-    if (boutiqueError) {
-      setSaving(false)
-      return setMessage(`Erreur boutique: ${boutiqueError.message}`)
-    }
-
-    const { error: subscriptionError } = await supabase.from('subscriptions').insert({
-      boutique_id: boutique.id,
-      plan: selectedPlan.code,
-      country_code: selectedCountry.code,
-      amount_cfa: monthlyPrice,
-      reference_amount_cfa: monthlyPrice,
-      billing_currency: selectedPricing ? billingCurrency : null,
-      billing_amount: selectedPricing ? billingAmount : null,
-      exchange_rate: selectedPricing && billingCurrency === 'USD' ? usdXofRate : null,
-      exchange_rate_at: selectedPricing && billingCurrency === 'USD' ? usdXofRateAt : null,
-      status: 'pending',
-      feature_mode: isCompany ? 'ai' : featureMode,
-      has_ads: hasAds,
-      has_ai_agent: hasAi,
-      payment_method: selectedPaymentMethod?.code || null,
-      payment_type: selectedPaymentMethod?.payment_type || null,
-      payment_selected_at: selectedPaymentMethod ? new Date().toISOString() : null,
-    })
-
+    const {data:{user}}=await supabase.auth.getUser();if(!user){setSaving(false);return setMessage('Connectez-vous avant de créer une boutique.')}
+    const {data:boutique,error:boutiqueError}=await supabase.from('boutiques').insert({user_id:user.id,country_id:countryId,city_id:cityId,name:name.trim(),description:description.trim()||null,type,plan:selectedPlan.code,product_count_limit:selectedPlan.product_limit,has_ads:hasAds,has_ai_agent:hasAi,is_live:false,owner_display_name:legalName.trim(),legal_verification_status:'pending'}).select('id').single()
+    if(boutiqueError){setSaving(false);return setMessage(`Erreur boutique: ${boutiqueError.message}`)}
+    const ext=(legalDocument.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')||'bin'
+    const documentPath=`${user.id}/${boutique.id}/${Date.now()}.${ext}`
+    const {error:uploadError}=await supabase.storage.from('boutique-legal-documents').upload(documentPath,legalDocument,{upsert:false,contentType:legalDocument.type||undefined})
+    if(uploadError){await supabase.from('boutiques').delete().eq('id',boutique.id);setSaving(false);return setMessage(`Le document n’a pas pu être envoyé: ${uploadError.message}`)}
+    const acceptedAt=new Date().toISOString()
+    const {error:legalError}=await supabase.from('boutique_legal_onboarding').insert({boutique_id:boutique.id,user_id:user.id,legal_name:legalName.trim(),document_type:documentType,document_number:documentNumber.trim(),document_url:documentPath,terms_version:TERMS_VERSION,terms_accepted:true,terms_accepted_at:acceptedAt,verification_status:'pending'})
+    if(legalError){await supabase.storage.from('boutique-legal-documents').remove([documentPath]);await supabase.from('boutiques').delete().eq('id',boutique.id);setSaving(false);return setMessage(`La vérification légale n’a pas pu être enregistrée: ${legalError.message}`)}
+    const {error:subscriptionError}=await supabase.from('subscriptions').insert({boutique_id:boutique.id,plan:selectedPlan.code,country_code:selectedCountry.code,amount_cfa:monthlyPrice,reference_amount_cfa:monthlyPrice,billing_currency:selectedPricing?billingCurrency:null,billing_amount:selectedPricing?billingAmount:null,exchange_rate:selectedPricing&&billingCurrency==='USD'?usdXofRate:null,exchange_rate_at:selectedPricing&&billingCurrency==='USD'?usdXofRateAt:null,status:'pending',feature_mode:isCompany?'ai':featureMode,has_ads:hasAds,has_ai_agent:hasAi,payment_method:selectedPaymentMethod?.code||null,payment_type:selectedPaymentMethod?.payment_type||null,payment_selected_at:selectedPaymentMethod?acceptedAt:null})
     setSaving(false)
-    if (subscriptionError) {
-      return setMessage(`Boutique créée, mais l’abonnement n’a pas pu être enregistré: ${subscriptionError.message}`)
-    }
-
-    if (!selectedPricing || !availablePaymentMethods.length) {
-      return setMessage(`Demande enregistrée: ${selectedPlan.name_fr}. La boutique est en attente. WakhReek n’exige aucun paiement pour ${selectedCountry.name_fr} tant que le tarif et les moyens de paiement de ce pays ne sont pas configurés.`)
-    }
-
-    setMessage(`Demande enregistrée: ${selectedPlan.name_fr} — ${billingCurrency === 'USD' ? `$${billingAmount.toFixed(2)} USD` : `${monthlyPrice.toLocaleString('fr-FR')} CFA`}/mois — ${selectedPaymentMethod?.name}. L’abonnement est en attente de paiement et de validation.`)
+    if(subscriptionError)return setMessage(`Demande légale enregistrée, mais l’abonnement n’a pas pu être enregistré: ${subscriptionError.message}`)
+    setMessage('Demande enregistrée. Votre boutique reste inactive pendant la vérification des documents, du contrat et, si applicable, du paiement. WakhReek vous informera après validation.')
   }
 
-  return <AppShell>
-    <main className="create-shop">
-      <header><button onClick={() => router.push('/market')}>← Marché</button><div><h1>Créer une boutique</h1><p>Location d’un espace commercial sur WakhReek Market</p></div></header>
-      <div className="contract-note"><strong>Principe WakhReek</strong><p>WakhReek loue l’espace de la boutique. Le vendeur reste libre de ses produits, photos, descriptions et prix de vente. Ses bénéfices ou pertes lui appartiennent. La plateforme applique seulement les limites et services de la formule choisie.</p></div>
-      <form onSubmit={submit}>
-        <section><h2>1. Informations générales</h2><label>Nom de la boutique<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nom de votre boutique" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Présentez votre activité" /></label></section>
-        <section><h2>2. Localisation et type</h2><div className="two"><label>Pays<select value={countryId} onChange={e=>setCountryId(e.target.value)}>{countries.map(c=><option key={c.id} value={c.id}>{c.flag_emoji} {c.name_fr}</option>)}</select></label><label>Ville<select value={cityId} onChange={e=>setCityId(e.target.value)} disabled={!cityOptions.length}>{cityOptions.length ? cityOptions.map(c=><option key={c.id} value={c.id}>{c.name}</option>) : <option value="">Aucune ville enregistrée pour ce pays</option>}</select></label></div><label>Type de boutique<select value={type} onChange={e=>setType(e.target.value)}><option value="physique">Boutique physique</option><option value="en_ligne">Boutique en ligne</option><option value="les_deux">Les deux</option></select></label>{selectedCountry && <div className="billing-note"><strong>Tarification WakhReek {selectedCountry.flag_emoji} {selectedCountry.name_fr}</strong><span>{selectedPricing ? `Configuration active: ${billingCurrency}.` : 'Le tarif WakhReek de ce pays n’est pas encore configuré. Cela ne bloque pas la demande de boutique.'}</span></div>}</section>
-        <section><h2>3. Formule de location</h2><p className="hint">Choisissez le nombre de produits que votre boutique pourra afficher.</p><div className="plans">{plans.map(p=><button type="button" key={p.code} className={selectedPlan?.code===p.code?'selected':''} onClick={()=>setPlanCode(p.code)}><strong>{p.name_fr}</strong><small>{p.product_limit == null ? 'Produits illimités' : `Jusqu’à ${p.product_limit} produits`}</small><b>{formatBilling(p.monthly_rent_cfa)} / mois</b>{p.target_segment === 'company' && <em>Entreprises / toutes les fonctionnalités</em>}</button>)}</div></section>
-        <section><h2>4. Services de la formule</h2>{isCompany ? <div className="company-box"><strong>Formule Entreprise complète</strong><p>Produits illimités + publicité + agent IA + toutes les fonctionnalités WakhReek Market.</p><b>{formatBilling(selectedPlan?.monthly_with_ai_cfa || selectedPlan?.monthly_rent_cfa)} / mois</b></div> : <div className="features"><label className={featureMode==='rent'?'feature selected':''}><input type="radio" name="features" checked={featureMode==='rent'} onChange={()=>setFeatureMode('rent')} /><span><b>Location seulement</b><small>{formatBilling(selectedPlan?.monthly_rent_cfa)} / mois</small></span></label><label className={featureMode==='ads'?'feature selected':''}><input type="radio" name="features" checked={featureMode==='ads'} onChange={()=>setFeatureMode('ads')} /><span><b>Location + publicité</b><small>{formatBilling(selectedPlan?.monthly_with_ads_cfa)} / mois</small></span></label><label className={featureMode==='ai'?'feature selected':''}><input type="radio" name="features" checked={featureMode==='ai'} onChange={()=>setFeatureMode('ai')} /><span><b>Location + publicité + IA</b><small>{formatBilling(selectedPlan?.monthly_with_ai_cfa)} / mois</small></span></label></div>}</section>
-        <section><h2>5. Gestion du stock</h2><p className="hint">Le stock n’est pas une obligation commerciale imposée par WakhReek.</p><label className="radio"><input type="radio" name="stock" checked={stockMode==='optional'} onChange={()=>setStockMode('optional')} /> Je veux indiquer et gérer les quantités en stock</label><label className="radio"><input type="radio" name="stock" checked={stockMode==='hidden'} onChange={()=>setStockMode('hidden')} /> Je préfère ne pas communiquer mon stock</label></section>
-        <section><h2>6. Paiement des frais WakhReek</h2><p className="hint">Ces moyens concernent uniquement les frais WakhReek. Les prix, devises et paiements des produits du vendeur restent indépendants.</p>{availablePaymentMethods.length ? <div className="payment-methods">{availablePaymentMethods.map(method=><label key={method.code} className={paymentMethodCode===method.code?'payment selected':'payment'}><input type="radio" name="payment-method" checked={paymentMethodCode===method.code} onChange={()=>setPaymentMethodCode(method.code)} /><span><b>{method.name}</b><small>{method.payment_type === 'local' ? 'Paiement WakhReek local' : 'Paiement WakhReek'}</small></span></label>)}</div> : <div className="pending-payment"><strong>Aucun moyen de paiement WakhReek configuré pour ce pays.</strong><span>La demande de boutique reste possible. Aucun moyen de paiement ne sera inventé ou imposé.</span></div>}</section>
-        <div className="summary"><div><small>Formule choisie</small><b>{selectedPlan?.name_fr || 'Chargement...'}</b></div><div><small>Services</small><b>{isCompany ? 'Toutes fonctionnalités' : featureMode === 'ai' ? 'Publicité + IA' : featureMode === 'ads' ? 'Publicité' : 'Location seulement'}</b></div><div className="price"><small>Total mensuel WakhReek</small><strong>{billingAmount == null ? 'À configurer' : billingCurrency === 'USD' ? `$${billingAmount.toFixed(2)} USD` : `${billingAmount.toLocaleString('fr-FR')} CFA`}</strong>{billingCurrency === 'USD' && <small>Référence: {monthlyPrice.toLocaleString('fr-FR')} CFA</small>}</div></div>
-        <p className="activation-note">Après soumission, un abonnement en attente est créé. La boutique reste inactive jusqu’à la configuration éventuelle du paiement et à sa validation.</p>
-        {message && <p className="message">{message}</p>}<button className="submit" disabled={saving || !selectedPlan}>{saving?'Enregistrement...':'Soumettre la demande de boutique'}</button>
-      </form>
-    </main>
-    <style jsx>{`
-      .create-shop{max-width:980px;margin:0 auto;padding:24px;color:#172033}.create-shop>header{display:flex;gap:18px;align-items:center;margin-bottom:18px}.create-shop>header button{border:1px solid #d6deea;background:white;border-radius:9px;padding:10px 14px}.create-shop h1{margin:0;color:#075dcc}.create-shop header p{margin:5px 0;color:#667085}.contract-note{background:#fff7e8;border:1px solid #ffd48a;border-radius:12px;padding:16px;margin-bottom:18px}.contract-note strong{color:#b85a00}.contract-note p{margin:7px 0 0;line-height:1.6}form{display:grid;gap:16px}section{background:white;border:1px solid #e1e6ee;border-radius:12px;padding:20px}h2{font-size:18px;margin:0 0 16px;color:#075dcc}label{display:grid;gap:6px;margin:12px 0;font-size:13px;font-weight:700}input,textarea,select{border:1px solid #ccd5e2;border-radius:8px;padding:11px;font:inherit;background:white}textarea{min-height:90px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.billing-note{display:grid;gap:4px;margin-top:14px;padding:12px;border-radius:10px;background:#eef6ff;border:1px solid #cfe4ff}.billing-note strong{color:#075dcc}.billing-note span{font-size:12px;color:#667085}.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.plans button{border:2px solid #dbe3ee;background:#fff;border-radius:12px;padding:18px;text-align:left;display:grid;gap:7px}.plans button.selected{border-color:#0875e8;background:#eef6ff}.plans small{color:#667085}.plans b{color:#075dcc}.plans em{font-style:normal;font-size:11px;color:#b85a00}.hint{color:#667085;font-size:13px}.features,.payment-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.feature,.payment{border:2px solid #dbe3ee;border-radius:12px;padding:14px;display:flex;gap:10px;align-items:flex-start;margin:0;cursor:pointer}.feature.selected,.payment.selected{border-color:#0875e8;background:#eef6ff}.feature span,.payment span{display:grid;gap:6px}.feature small,.payment small{color:#667085}.company-box{background:#f4f0ff;border:1px solid #d9caff;border-radius:12px;padding:16px}.company-box strong{color:#6537b8}.company-box p{margin:7px 0;color:#5b6472}.company-box b{color:#6537b8}.radio{display:flex;align-items:center;gap:9px;font-weight:500}.pending-payment{display:grid;gap:6px;padding:14px;border:1px solid #ffd48a;background:#fff7e8;border-radius:10px}.pending-payment span{font-size:13px;color:#667085}.summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#edf7ff;border-radius:10px;padding:16px;color:#075dcc}.summary div{display:grid;gap:5px}.summary small{color:#667085}.summary .price{text-align:right}.summary strong{font-size:22px}.activation-note{margin:0;color:#667085;font-size:13px}.message{padding:12px;background:#fff7e8;border-radius:8px}.submit{border:0;border-radius:10px;padding:14px;background:#0875e8;color:#fff;font-weight:900;font-size:15px}.submit:disabled{opacity:.6}@media(max-width:700px){.create-shop{padding:12px}.two,.plans,.features,.payment-methods,.summary{grid-template-columns:1fr}.summary .price{text-align:left}.create-shop>header{align-items:flex-start}}
-    `}</style>
-  </AppShell>
+  return <AppShell><main className="create-shop">
+    <header><button onClick={()=>router.push('/market')}>← Marché</button><div><h1>Créer une boutique</h1><p>Location d’un espace commercial sur WakhReek Market</p></div></header>
+    <div className="contract-note"><strong>Principe WakhReek</strong><p>WakhReek loue l’espace de la boutique. Le vendeur reste libre de ses produits, photos, descriptions et prix de vente. Ses bénéfices ou pertes lui appartiennent. La plateforme applique seulement les limites et services de la formule choisie.</p></div>
+    <form onSubmit={submit}>
+      <section><h2>1. Informations générales</h2><label>Nom de la boutique<input value={name} onChange={e=>setName(e.target.value)} placeholder="Nom de votre boutique" required /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Présentez votre activité" /></label></section>
+      <section><h2>2. Localisation et type</h2><div className="two"><label>Pays<select value={countryId} onChange={e=>setCountryId(e.target.value)}>{countries.map(c=><option key={c.id} value={c.id}>{c.flag_emoji} {c.name_fr}</option>)}</select></label><label>Ville<select value={cityId} onChange={e=>setCityId(e.target.value)} disabled={!cityOptions.length}>{cityOptions.length?cityOptions.map(c=><option key={c.id} value={c.id}>{c.name}</option>):<option value="">Aucune ville enregistrée</option>}</select></label></div><label>Type de boutique<select value={type} onChange={e=>setType(e.target.value)}><option value="physique">Boutique physique</option><option value="en_ligne">Boutique en ligne</option><option value="les_deux">Les deux</option></select></label>{selectedCountry&&<div className="billing-note"><strong>Tarification WakhReek {selectedCountry.flag_emoji} {selectedCountry.name_fr}</strong><span>{selectedPricing?`Configuration active: ${billingCurrency}.`:'Le tarif de ce pays n’est pas encore configuré. Cela ne bloque pas la demande.'}</span></div>}</section>
+      <section><h2>3. Formule de location</h2><p className="hint">Choisissez le nombre de produits que votre boutique pourra afficher.</p><div className="plans">{plans.map(p=><button type="button" key={p.code} className={selectedPlan?.code===p.code?'selected':''} onClick={()=>setPlanCode(p.code)}><strong>{p.name_fr}</strong><small>{p.product_limit==null?'Produits illimités':`Jusqu’à ${p.product_limit} produits`}</small><b>{formatBilling(p.monthly_rent_cfa)} / mois</b>{p.target_segment==='company'&&<em>Entreprises / toutes les fonctionnalités</em>}</button>)}</div></section>
+      <section><h2>4. Services de la formule</h2>{isCompany?<div className="company-box"><strong>Formule Entreprise complète</strong><p>Produits illimités + publicité + agent IA + toutes les fonctionnalités WakhReek Market.</p><b>{formatBilling(selectedPlan?.monthly_with_ai_cfa||selectedPlan?.monthly_rent_cfa)} / mois</b></div>:<div className="features">{[['rent','Location seulement',selectedPlan?.monthly_rent_cfa],['ads','Location + publicité',selectedPlan?.monthly_with_ads_cfa],['ai','Location + publicité + IA',selectedPlan?.monthly_with_ai_cfa]].map(x=><label key={x[0]} className={featureMode===x[0]?'feature selected':'feature'}><input type="radio" name="features" checked={featureMode===x[0]} onChange={()=>setFeatureMode(x[0])}/><span><b>{x[1]}</b><small>{formatBilling(x[2])} / mois</small></span></label>)}</div>}</section>
+      <section><h2>5. Gestion du stock</h2><p className="hint">Le vendeur choisit librement s’il souhaite communiquer son stock.</p><label className="radio"><input type="radio" name="stock" checked={stockMode==='optional'} onChange={()=>setStockMode('optional')}/> Je veux indiquer et gérer les quantités en stock</label><label className="radio"><input type="radio" name="stock" checked={stockMode==='hidden'} onChange={()=>setStockMode('hidden')}/> Je préfère ne pas communiquer mon stock</label></section>
+      <section><h2>6. Responsable et document justificatif</h2><p className="hint">Ces informations servent uniquement à vérifier le responsable de la boutique. Le document est conservé dans un espace privé.</p><label>Nom légal du responsable<input value={legalName} onChange={e=>setLegalName(e.target.value)} required /></label><div className="two"><label>Type de document<select value={documentType} onChange={e=>setDocumentType(e.target.value)}><option value="id_card">Carte d’identité</option><option value="passport">Passeport</option><option value="business_registration">Registre / document d’entreprise</option><option value="other">Autre document officiel</option></select></label><label>Numéro du document<input value={documentNumber} onChange={e=>setDocumentNumber(e.target.value)} required /></label></div><label>Photo ou PDF du document<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={e=>setLegalDocument(e.target.files?.[0]||null)} required /></label><small className="privacy">Formats acceptés : JPG, PNG, WEBP ou PDF — maximum 10 Mo. Ce fichier n’est pas publié dans le Market.</small></section>
+      <section><h2>7. Contrat de location WakhReek</h2><div className="terms"><strong>Conditions essentielles — version {TERMS_VERSION}</strong><p>WakhReek fournit au commerçant un espace numérique selon la formule choisie (15 produits, 45 produits ou illimité selon le plan). Le commerçant reste seul responsable de la légalité, de la qualité, des photos, descriptions, prix, ventes, bénéfices, pertes et, s’il choisit de l’afficher, de son stock. WakhReek peut suspendre ou refuser une boutique ou un contenu contraire aux règles de la plateforme ou à la loi. La boutique ne devient publique qu’après les vérifications et validations requises.</p><label className="accept"><input type="checkbox" checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)}/><span>J’ai lu et j’accepte le contrat de location de boutique WakhReek et j’autorise la vérification des informations fournies.</span></label></div></section>
+      <section><h2>8. Paiement des frais WakhReek</h2><p className="hint">Ces moyens concernent uniquement les frais WakhReek. Les prix et paiements des produits du vendeur restent indépendants.</p>{availablePaymentMethods.length?<div className="payment-methods">{availablePaymentMethods.map(m=><label key={m.code} className={paymentMethodCode===m.code?'payment selected':'payment'}><input type="radio" name="payment-method" checked={paymentMethodCode===m.code} onChange={()=>setPaymentMethodCode(m.code)}/><span><b>{m.name}</b><small>{m.payment_type==='local'?'Paiement WakhReek local':'Paiement WakhReek'}</small></span></label>)}</div>:<div className="pending-payment"><strong>Aucun moyen de paiement WakhReek configuré pour ce pays.</strong><span>La demande reste possible. Aucun moyen de paiement ne sera inventé ou imposé.</span></div>}</section>
+      <div className="summary"><div><small>Formule choisie</small><b>{selectedPlan?.name_fr||'Chargement...'}</b></div><div><small>Services</small><b>{isCompany?'Toutes fonctionnalités':featureMode==='ai'?'Publicité + IA':featureMode==='ads'?'Publicité':'Location seulement'}</b></div><div className="price"><small>Total mensuel WakhReek</small><strong>{billingAmount==null?'À configurer':billingCurrency==='USD'?`$${billingAmount.toFixed(2)} USD`:`${billingAmount.toLocaleString('fr-FR')} CFA`}</strong></div></div>
+      <p className="activation-note">Après soumission, la demande, le contrat et le document passent en vérification. La boutique reste inactive jusqu’à validation.</p>{message&&<p className="message">{message}</p>}<button className="submit" disabled={saving||!selectedPlan||!termsAccepted}>{saving?'Enregistrement sécurisé...':'Soumettre la demande de boutique'}</button>
+    </form>
+  </main><style jsx>{`
+    .create-shop{max-width:980px;margin:0 auto;padding:24px;color:#172033}.create-shop>header{display:flex;gap:18px;align-items:center;margin-bottom:18px}.create-shop>header button{border:1px solid #d6deea;background:white;border-radius:9px;padding:10px 14px}.create-shop h1{margin:0;color:#075dcc}.create-shop header p{margin:5px 0;color:#667085}.contract-note{background:#fff7e8;border:1px solid #ffd48a;border-radius:12px;padding:16px;margin-bottom:18px}.contract-note strong{color:#b85a00}.contract-note p{margin:7px 0 0;line-height:1.6}form{display:grid;gap:16px}section{background:white;border:1px solid #e1e6ee;border-radius:12px;padding:20px}h2{font-size:18px;margin:0 0 16px;color:#075dcc}label{display:grid;gap:6px;margin:12px 0;font-size:13px;font-weight:700}input,textarea,select{border:1px solid #ccd5e2;border-radius:8px;padding:11px;font:inherit;background:white}textarea{min-height:90px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.billing-note{display:grid;gap:4px;margin-top:14px;padding:12px;border-radius:10px;background:#eef6ff;border:1px solid #cfe4ff}.billing-note strong{color:#075dcc}.billing-note span,.hint,.privacy,.activation-note{font-size:13px;color:#667085}.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.plans button{border:2px solid #dbe3ee;background:#fff;border-radius:12px;padding:18px;text-align:left;display:grid;gap:7px}.plans button.selected{border-color:#0875e8;background:#eef6ff}.plans small{color:#667085}.plans b{color:#075dcc}.plans em{font-style:normal;font-size:11px;color:#b85a00}.features,.payment-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.feature,.payment{border:2px solid #dbe3ee;border-radius:12px;padding:14px;display:flex;gap:10px;align-items:flex-start;margin:0;cursor:pointer}.feature.selected,.payment.selected{border-color:#0875e8;background:#eef6ff}.feature span,.payment span{display:grid;gap:6px}.feature small,.payment small{color:#667085}.company-box{background:#f4f0ff;border:1px solid #d9caff;border-radius:12px;padding:16px}.radio,.accept{display:flex;align-items:flex-start;gap:9px;font-weight:500}.terms{background:#f7f9fc;border:1px solid #dbe3ee;border-radius:10px;padding:15px}.terms p{line-height:1.65;color:#475467}.accept{padding-top:10px;border-top:1px solid #dbe3ee}.pending-payment{display:grid;gap:6px;padding:14px;border:1px solid #ffd48a;background:#fff7e8;border-radius:10px}.pending-payment span{font-size:13px;color:#667085}.summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;background:#edf7ff;border-radius:10px;padding:16px;color:#075dcc}.summary div{display:grid;gap:5px}.summary small{color:#667085}.summary .price{text-align:right}.summary strong{font-size:22px}.message{padding:12px;background:#fff7e8;border-radius:8px}.submit{border:0;border-radius:10px;padding:14px;background:#0875e8;color:#fff;font-weight:900;font-size:15px}.submit:disabled{opacity:.55}@media(max-width:700px){.create-shop{padding:12px}.two,.plans,.features,.payment-methods,.summary{grid-template-columns:1fr}.summary .price{text-align:left}.create-shop>header{align-items:flex-start}}
+  `}</style></AppShell>
 }
