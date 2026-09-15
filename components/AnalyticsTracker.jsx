@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 
 const ATTR_KEY='wakhreek_attribution_v1'
 const SESSION_KEY='wakhreek_session_v1'
+const SIGNUP_KEY='wakhreek_signup_tracked_v1'
 
 function getSession(){
   try {
@@ -39,8 +40,30 @@ export async function trackWakhReekEvent(eventName, metadata={}){
   })
 }
 
+function trackNewUser(user){
+  if(!user?.id||!user.created_at)return
+  try {
+    const age=Date.now()-new Date(user.created_at).getTime()
+    const key=`${SIGNUP_KEY}:${user.id}`
+    if(age>=0&&age<10*60*1000&&!localStorage.getItem(key)){
+      localStorage.setItem(key,'1')
+      trackWakhReekEvent('signup',{method:'supabase_auth'})
+    }
+  } catch {}
+}
+
 export default function AnalyticsTracker(){
   const pathname=usePathname()
   useEffect(()=>{trackWakhReekEvent('visit',{path:pathname})},[pathname])
+  useEffect(()=>{
+    const onClick=e=>{
+      const a=e.target?.closest?.('a[href]')
+      if(a?.getAttribute('href')?.toLowerCase().endsWith('.apk')) trackWakhReekEvent('apk_download',{file:a.getAttribute('href')})
+    }
+    document.addEventListener('click',onClick,true)
+    supabase.auth.getUser().then(({data})=>trackNewUser(data?.user)).catch(()=>{})
+    const {data:listener}=supabase.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN')trackNewUser(session?.user)})
+    return()=>{document.removeEventListener('click',onClick,true);listener?.subscription?.unsubscribe?.()}
+  },[])
   return null
 }
