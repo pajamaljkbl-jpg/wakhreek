@@ -6,6 +6,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import I18nProvider from '../components/I18nProvider'
 import AnalyticsTracker from '../components/AnalyticsTracker'
 import NewUserAssistant from '../components/NewUserAssistant'
+import BoutiqueOwnerAssistant from '../components/BoutiqueOwnerAssistant'
 
 export const metadata = {
   title: "WakhReek",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
           <PushRegistrar />
           {children}
           <NewUserAssistant />
+          <BoutiqueOwnerAssistant />
           <CommunicationTvBand />
           <OutgoingCallTone />
           <LanguageSwitcher />
