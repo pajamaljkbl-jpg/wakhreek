@@ -9,8 +9,11 @@ export async function POST(req){
   if(!process.env.FAL_KEY)return NextResponse.json({error:'FAL_KEY is not configured'},{status:500})
   const auth=req.headers.get('authorization')||''
   if(!auth.startsWith('Bearer '))return NextResponse.json({error:'Unauthorized'},{status:401})
-  const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,{global:{headers:{Authorization:auth}}})
-  const{data:{user},error:userError}=await supabase.auth.getUser()
+  const supabaseUrl=process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if(!supabaseUrl||!supabaseKey)return NextResponse.json({error:'Supabase server configuration is missing'},{status:500})
+  const supabase=createClient(supabaseUrl,supabaseKey,{global:{headers:{Authorization:auth}},auth:{persistSession:false,autoRefreshToken:false}})
+  const{data:{user},error:userError}=await supabase.auth.getUser(auth.slice(7))
   if(userError||!user||user.app_metadata?.role!=='admin')return NextResponse.json({error:'Admin only'},{status:403})
   const body=await req.json()
   const prompt=String(body?.prompt||'').trim()
