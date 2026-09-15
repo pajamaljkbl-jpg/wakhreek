@@ -2,7 +2,16 @@
 
 import { useEffect } from 'react'
 
-const DEFAULT_ICE_SERVERS = [
+const FALLBACK_ICE_SERVERS = [
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ]
@@ -12,18 +21,18 @@ export default function TurnBootstrap() {
     if (typeof window === 'undefined' || !window.RTCPeerConnection) return
 
     let cancelled = false
-    let iceServers = DEFAULT_ICE_SERVERS
+    // Start with a relay-capable configuration immediately. The previous version
+    // started STUN-only while /api/turn was loading, so the first call could be
+    // created without any relay candidate on real phone networks.
+    let iceServers = FALLBACK_ICE_SERVERS
     const NativeRTCPeerConnection = window.RTCPeerConnection
 
-    // Install the wrapper immediately. Previously it was installed only after
-    // /api/turn returned, so a fast tap on Audio/Video could create a peer with
-    // STUN only and never receive the TURN configuration.
     const WrappedRTCPeerConnection = new Proxy(NativeRTCPeerConnection, {
       construct(Target, args) {
         const [configuration = {}, constraints] = args
         const configured = Array.isArray(iceServers) && iceServers.length
           ? iceServers
-          : DEFAULT_ICE_SERVERS
+          : FALLBACK_ICE_SERVERS
         return Reflect.construct(Target, [
           { ...configuration, iceServers: configured },
           constraints,
@@ -43,7 +52,7 @@ export default function TurnBootstrap() {
           iceServers = data.iceServers
         }
       } catch (error) {
-        console.log('TURN config unavailable; keeping STUN fallback.', error)
+        console.log('TURN config unavailable; keeping relay fallback.', error)
       }
     }
 
