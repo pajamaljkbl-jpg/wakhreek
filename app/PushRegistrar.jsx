@@ -18,6 +18,57 @@ export default function PushRegistrar() {
   const [needsPermission, setNeedsPermission] = useState(false)
   const [busy, setBusy] = useState(false)
   const inFlightRef = useRef(false)
+  const ringContextRef = useRef(null)
+  const ringTimerRef = useRef(null)
+
+  function getRingContext() {
+    if (typeof window === 'undefined') return null
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    if (!AudioCtx) return null
+    if (!ringContextRef.current) ringContextRef.current = new AudioCtx()
+    return ringContextRef.current
+  }
+
+  async function unlockRingAudio() {
+    const ctx = getRingContext()
+    if (ctx?.state === 'suspended') {
+      try { await ctx.resume() } catch {}
+    }
+  }
+
+  function stopGlobalRing() {
+    if (ringTimerRef.current) clearInterval(ringTimerRef.current)
+    ringTimerRef.current = null
+    if (navigator.vibrate) navigator.vibrate(0)
+  }
+
+  function ringOnce() {
+    const ctx = getRingContext()
+    if (!ctx || ctx.state !== 'running') return
+    const now = ctx.currentTime
+    ;[[659.25,0,.28],[783.99,.34,.28],[987.77,.68,.38],[783.99,1.18,.24],[987.77,1.5,.42]].forEach(([frequency,offset,duration]) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(frequency, now + offset)
+      gain.gain.setValueAtTime(.0001, now + offset)
+      gain.gain.exponentialRampToValueAtTime(.16, now + offset + .025)
+      gain.gain.exponentialRampToValueAtTime(.0001, now + offset + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now + offset)
+      osc.stop(now + offset + duration + .03)
+    })
+    if (navigator.vibrate) navigator.vibrate([250,100,250,350,500])
+  }
+
+  async function startGlobalRing() {
+    stopGlobalRing()
+    await unlockRingAudio()
+    ringOnce()
+    ringTimerRef.current = setInterval(ringOnce, 2400)
+    window.setTimeout(stopGlobalRing, 45000)
+  }
 
   async function saveSubscription(currentUser, askPermission = false) {
     if (!currentUser || inFlightRef.current) return
@@ -71,6 +122,16 @@ export default function PushRegistrar() {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(e => console.log('Service worker registration error', e))
 
+    const unlock = () => unlockRingAudio()
+    window.addEventListener('pointerdown', unlock, { passive: true })
+    window.addEventListener('keydown', unlock)
+
+    const onServiceWorkerMessage = event => {
+      if (event?.data?.type !== 'INCOMING_CALL_WAKE') return
+      startGlobalRing()
+    }
+    if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', onServiceWorkerMessage)
+
     const syncUser = currentUser => {
       setUser(currentUser || null)
       if (!currentUser || typeof Notification === 'undefined') return
@@ -81,7 +142,14 @@ export default function PushRegistrar() {
 
     supabase.auth.getUser().then(({ data }) => syncUser(data?.user))
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => syncUser(session?.user))
-    return () => listener?.subscription?.unsubscribe()
+    return () => {
+      listener?.subscription?.unsubscribe()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+      if ('serviceWorker' in navigator) navigator.serviceWorker.removeEventListener('message', onServiceWorkerMessage)
+      stopGlobalRing()
+      ringContextRef.current?.close?.()
+    }
   }, [])
 
   if (!user || !needsPermission) return null
