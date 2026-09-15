@@ -16,4 +16,8 @@ export default function NewUserAssistant(){
   <button style={choice} onClick={()=>go('/market/create')}>🏪<b>فتح Boutique</b><small>اختر الخطة وابدأ طلب متجرك</small></button>
  </div><p style={{fontSize:12,opacity:.7}}>يمكنك إغلاق المساعد ومتابعة WakhReek بشكل عادي.</p></section></div>
 }
-const backdrop={position:'fixed',inset:0,background:'rgba(5,18,38,.55)',display:'grid',placeItems:'center',padding:18,zIndex:99999},box={position:'relative',width:'min(620px,100%)',background:'#fff',borderRadius:22,padding:24,textAlign:'center',boxShadow:'0 24px 70px rgba(0,0,0,.25)',color:'#172033'},x={position:'absolute',right:14,top:10,border:0,background:'transparent',fontSize:28,cursor:'pointer'},grid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,margin:'20px 0'},choice={border:'1px solid #dbe5f3',background:'#f8fbff',borderRadius:16,padding:18,cursor:'pointer',display:'grid',gap:7,fontSize:24},
+const backdrop={position:'fixed',inset:0,background:'rgba(5,18,38,.55)',display:'grid',placeItems:'center',padding:18,zIndex:99999}
+const box={position:'relative',width:'min(620px,100%)',background:'#fff',borderRadius:22,padding:24,textAlign:'center',boxShadow:'0 24px 70px rgba(0,0,0,.25)',color:'#172033'}
+const x={position:'absolute',right:14,top:10,border:0,background:'transparent',fontSize:28,cursor:'pointer'}
+const grid={display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,margin:'20px 0'}
+const choice={border:'1px solid #dbe5f3',background:'#f8fbff',borderRadius:16,padding:18,cursor:'pointer',display:'grid',gap:7,fontSize:24}
