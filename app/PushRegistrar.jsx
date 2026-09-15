@@ -1,100 +1,93 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const VAPID_PUBLIC_KEY = "BAaIzBNTHgNIiJF6-kX4Lf9nvhOsQqiiohQdJJyFKb1jkT4dVbOLmTyqtA5h1B_QwqVeHaiNYjgohVq_UIe2L2M";
 
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i)
+  return outputArray
+}
+
 export default function PushRegistrar() {
-  useEffect(() => {
-    let registrationInFlight = false;
+  const [user, setUser] = useState(null)
+  const [needsPermission, setNeedsPermission] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const inFlightRef = useRef(false)
 
-    // Register the PWA service worker for every visitor, even before login.
-    // Push notification subscription remains limited to authenticated users below.
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((e) => {
-        console.log('Service worker registration error', e);
-      });
-    }
-
-    async function registerPWAAndPush(user) {
-      if (registrationInFlight) return;
-      registrationInFlight = true;
-      try {
-        if (typeof window === 'undefined') return;
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-        const urlBase64ToUint8Array = (base64String) => {
-          const padding = '='.repeat((4 - base64String.length % 4) % 4);
-          const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-          const rawData = window.atob(base64);
-          const outputArray = new Uint8Array(rawData.length);
-          for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-          return outputArray;
-        };
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-          });
-        }
-        const payload = sub.toJSON();
-        if (!payload?.endpoint) return;
-
-        // Keep the existing row for this browser/device and refresh its payload.
-        // This avoids delete+insert races while preserving the user's other devices.
-        const { data: existing, error: lookupError } = await supabase
-          .from('push_subscriptions')
-          .select('id')
-          .eq('user_id', user.id)
-          .contains('subscription', { endpoint: payload.endpoint })
-          .limit(1)
-          .maybeSingle();
-
-        if (lookupError) {
-          console.log('Push lookup error', lookupError);
-          return;
-        }
-
-        if (existing?.id) {
-          const { error } = await supabase
-            .from('push_subscriptions')
-            .update({ subscription: payload })
-            .eq('id', existing.id)
-            .eq('user_id', user.id);
-          if (error) console.log('Push save error', error);
-          else console.log('Push global refreshed');
-          return;
-        }
-
-        const { error } = await supabase.from('push_subscriptions').insert({
-          user_id: user.id,
-          subscription: payload
-        });
-
-        // A concurrent auth event may have inserted the same endpoint first.
-        // The unique index is then doing its job, so do not surface it as an app error.
-        if (error && error.code !== '23505') console.log('Push save error', error);
-        else console.log('Push global registered');
-      } catch (e) {
-        console.log('Push error', e);
-      } finally {
-        registrationInFlight = false;
+  async function saveSubscription(currentUser, askPermission = false) {
+    if (!currentUser || inFlightRef.current) return
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return
+    inFlightRef.current = true
+    setBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js')
+      let permission = Notification.permission
+      if (permission === 'default' && askPermission) permission = await Notification.requestPermission()
+      if (permission !== 'granted') {
+        setNeedsPermission(permission === 'default')
+        return
       }
+
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        })
+      }
+      const payload = sub.toJSON()
+      if (!payload?.endpoint) return
+
+      const { data: existing, error: lookupError } = await supabase
+        .from('push_subscriptions')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .contains('subscription', { endpoint: payload.endpoint })
+        .limit(1)
+        .maybeSingle()
+      if (lookupError) throw lookupError
+
+      if (existing?.id) {
+        const { error } = await supabase.from('push_subscriptions').update({ subscription: payload }).eq('id', existing.id).eq('user_id', currentUser.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('push_subscriptions').insert({ user_id: currentUser.id, subscription: payload })
+        if (error && error.code !== '23505') throw error
+      }
+      setNeedsPermission(false)
+    } catch (e) {
+      console.log('Push registration error', e)
+    } finally {
+      inFlightRef.current = false
+      setBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(e => console.log('Service worker registration error', e))
+
+    const syncUser = currentUser => {
+      setUser(currentUser || null)
+      if (!currentUser || typeof Notification === 'undefined') return
+      if (Notification.permission === 'granted') saveSubscription(currentUser, false)
+      else if (Notification.permission === 'default') setNeedsPermission(true)
+      else setNeedsPermission(false)
     }
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) registerPWAAndPush(data.user);
-    });
+    supabase.auth.getUser().then(({ data }) => syncUser(data?.user))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => syncUser(session?.user))
+    return () => listener?.subscription?.unsubscribe()
+  }, [])
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) registerPWAAndPush(session.user);
-    });
+  if (!user || !needsPermission) return null
 
-    return () => listener?.subscription?.unsubscribe();
-  }, []);
-
-  return null;
+  return <div style={{position:'fixed',left:'50%',bottom:'18px',transform:'translateX(-50%)',zIndex:10000,width:'min(92vw,430px)',background:'#071426',color:'#fff',border:'1px solid #1d4ed8',borderRadius:'14px',padding:'12px 14px',boxShadow:'0 12px 34px #0008',display:'flex',alignItems:'center',gap:'12px'}}>
+    <div style={{flex:1,fontSize:'14px',lineHeight:1.35}}><strong>☎ مكالمات WakhReek</strong><br/><span style={{opacity:.86}}>فعّل الإشعارات لكي يرن الهاتف عند وصول مكالمة صوتية أو فيديو.</span></div>
+    <button type="button" disabled={busy} onClick={()=>saveSubscription(user,true)} style={{border:0,borderRadius:'10px',padding:'10px 13px',fontWeight:800,cursor:'pointer',background:'#2563eb',color:'#fff'}}>{busy?'…':'تفعيل'}</button>
+  </div>
 }
