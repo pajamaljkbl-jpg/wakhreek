@@ -7,6 +7,7 @@ import I18nProvider from '../components/I18nProvider'
 import AnalyticsTracker from '../components/AnalyticsTracker'
 import NewUserAssistant from '../components/NewUserAssistant'
 import BoutiqueOwnerAssistant from '../components/BoutiqueOwnerAssistant'
+import AdminShortcut from '../components/AdminShortcut'
 
 export const metadata = {
   title: "WakhReek",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
           <AnalyticsTracker />
           <PushRegistrar />
           {children}
+          <AdminShortcut />
           <NewUserAssistant />
           <BoutiqueOwnerAssistant />
           <CommunicationTvBand />
