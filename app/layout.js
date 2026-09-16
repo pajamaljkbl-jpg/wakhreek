@@ -1,4 +1,5 @@
 import './globals.css'
+import './payment-qr.css'
 import PushRegistrar from './PushRegistrar'
 import CommunicationTvBand from '../components/CommunicationTvBand'
 import OutgoingCallTone from '../components/OutgoingCallTone'
