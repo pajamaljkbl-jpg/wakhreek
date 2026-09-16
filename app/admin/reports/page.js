@@ -1,0 +1,14 @@
+'use client'
+import {useEffect,useState} from 'react'
+import Link from 'next/link'
+import {supabase} from '../../../lib/supabase'
+
+export default function ReportsAdmin(){
+ const[reports,setReports]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notes,setNotes]=useState({})
+ async function load(){setLoading(true);const{data,error}=await supabase.rpc('admin_reports');if(error)setError(error.message);else{setReports(data||[]);setError('')}setLoading(false)}
+ useEffect(()=>{load()},[])
+ async function update(r,status){const{error}=await supabase.rpc('admin_update_report',{p_report_id:r.id,p_status:status,p_admin_note:notes[r.id]??r.admin_note??null});if(error)setError(error.message);else load()}
+ return <main style={page}><div style={{maxWidth:1100,margin:'0 auto'}}><header style={head}><div><h1>🚨 Signalements WakhReek</h1><p>Révision humaine avant toute mesure contre un participant.</p></div><div><Link href="/admin" style={link}>← Admin</Link><button onClick={load} style={btn}>Actualiser</button></div></header>
+ {error&&<p style={err}>{error}</p>}{loading?<div style={card}>Chargement…</div>:reports.length===0?<div style={card}>Aucun signalement pour le moment.</div>:reports.map(r=><article key={r.id} style={card}><div style={row}><strong>{r.target_type} · {r.reason}</strong><span>{r.status}</span></div><p>{r.details||'—'}</p><small>Créé: {new Date(r.created_at).toLocaleString()}</small><textarea style={textarea} value={notes[r.id]??r.admin_note??''} onChange={e=>setNotes(n=>({...n,[r.id]:e.target.value}))} placeholder="Note administrateur / résultat de la vérification" maxLength={2000}/><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button style={btn} onClick={()=>update(r,'reviewing')}>Examiner</button><button style={btn} onClick={()=>update(r,'resolved')}>Résoudre</button><button style={secondary} onClick={()=>update(r,'dismissed')}>Rejeter</button></div></article>)}</div></main>
+}
+const page={minHeight:'100vh',padding:24,background:'#f4f7fb',fontFamily:'Arial,sans-serif',color:'#172033'},head={display:'flex',justifyContent:'space-between',alignItems:'center',gap:16,flexWrap:'wrap',marginBottom:20},card={background:'#fff',borderRadius:16,padding:20,marginBottom:14,boxShadow:'0 4px 18px #1028400f'},row={display:'flex',justifyContent:'space-between',gap:12},textarea={width:'100%',minHeight:80,margin:'14px 0',padding:10,border:'1px solid #ccd4df',borderRadius:10},btn={border:0,borderRadius:10,padding:'10px 14px',background:'#0066ff',color:'#fff',fontWeight:700,cursor:'pointer'},secondary={border:'1px solid #ccd4df',borderRadius:10,padding:'10px 14px',background:'#fff',fontWeight:700,cursor:'pointer'},link={textDecoration:'none',color:'#0066ff',marginRight:10},err={background:'#fff0f0',color:'#a00',padding:12,borderRadius:10}
