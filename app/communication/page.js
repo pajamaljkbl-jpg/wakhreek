@@ -25,17 +25,15 @@ export default function CommunicationPage() {
   const [busy, setBusy] = useState(false)
   const endRef = useRef(null)
 
-  const loadDirectory = useCallback(async () => {
-    const [{ data: users, error: usersError }, { data: shops, error: shopsError }] = await Promise.all([
-      supabase.rpc('search_registered_users', { search_text: '' }),
-      supabase.from('boutiques').select('id,user_id,name,logo_url,is_live,legal_verification_status').order('name')
-    ])
-    if (usersError || shopsError) {
-      setStatus((usersError || shopsError).message)
+  const loadBoutiques = useCallback(async () => {
+    const { data, error } = await supabase.from('boutiques')
+      .select('id,user_id,name,logo_url,is_live,legal_verification_status')
+      .order('name')
+    if (error) {
+      setStatus(error.message)
       return
     }
-    setPeople(users || [])
-    setBoutiques((shops || []).filter(shop => shop.user_id))
+    setBoutiques((data || []).filter(shop => shop.user_id))
   }, [])
 
   useEffect(() => {
@@ -47,26 +45,61 @@ export default function CommunicationPage() {
         return
       }
       setMe(data.user)
-      await loadDirectory()
+      await loadBoutiques()
     })
     return () => { mounted = false }
-  }, [router, loadDirectory])
+  }, [router, loadBoutiques])
+
+  useEffect(() => {
+    const q = search.trim()
+    if (q.length < 2) {
+      setPeople([])
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('search_registered_users', { search_text: q })
+      if (cancelled) return
+      if (error) {
+        setStatus(error.message)
+        setPeople([])
+        return
+      }
+      setStatus('')
+      setPeople(data || [])
+    }, 250)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [search])
 
   const directory = useMemo(() => {
-    const byOwner = new Map(boutiques.map(shop => [shop.user_id, shop]))
-    const rows = people.filter(person => person.id !== me?.id).map(person => {
-      const shop = byOwner.get(person.id)
-      return {
-        ...person,
-        kind: shop ? 'boutique' : 'person',
-        boutique_id: shop?.id || null,
-        display_name: shop?.name || person.display_name || person.email,
-        logo_url: shop?.logo_url || person.avatar_url || null
-      }
-    })
     const q = search.trim().toLowerCase()
-    if (!q) return rows
-    return rows.filter(row => `${row.display_name || ''} ${row.email || ''}`.toLowerCase().includes(q))
+    const rows = []
+    const usedOwners = new Set()
+
+    for (const shop of boutiques) {
+      if (shop.user_id === me?.id) continue
+      if (q && !`${shop.name || ''}`.toLowerCase().includes(q)) continue
+      rows.push({
+        id: shop.user_id,
+        kind: 'boutique',
+        boutique_id: shop.id,
+        display_name: shop.name || 'Boutique WakhReek',
+        logo_url: shop.logo_url || null,
+        email: null
+      })
+      usedOwners.add(shop.user_id)
+    }
+
+    for (const person of people) {
+      if (person.id === me?.id || usedOwners.has(person.id)) continue
+      rows.push({
+        ...person,
+        kind: 'person',
+        display_name: person.display_name || person.email || 'Utilisateur WakhReek',
+        logo_url: person.avatar_url || null
+      })
+    }
+    return rows
   }, [people, boutiques, me, search])
 
   const loadMessages = useCallback(async id => {
@@ -141,7 +174,7 @@ export default function CommunicationPage() {
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <Link href="/" className={styles.brand}><div><strong>WakhReek</strong><span>Talk Only</span></div></Link>
+        <Link href="/" className={styles.brand}><div><strong>WakhReek</strong><span>Took Only</span></div></Link>
       </header>
 
       <nav className={styles.mainNav} aria-label="WakhReek">
@@ -153,12 +186,11 @@ export default function CommunicationPage() {
       <section className={`${styles.shell} ${active ? styles.hasActive : ''}`}>
         <aside className={styles.sidebar}>
           <div className={styles.searchWrap}>
-            <span>⌕</span>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une personne ou une boutique" aria-label="Rechercher une personne ou une boutique" />
           </div>
           <div className={styles.contactList}>
             {directory.map(person => (
-              <div className={styles.contactRow} key={person.id}>
+              <div className={styles.contactRow} key={`${person.kind}-${person.id}`}>
                 <button className={styles.personMain} type="button" onClick={() => openConversation(person)} disabled={busy}>
                   <div className={styles.contactAvatar}>{initials(person)}</div>
                   <div className={styles.contactCopy}>
@@ -168,7 +200,7 @@ export default function CommunicationPage() {
                 </button>
               </div>
             ))}
-            {!directory.length && <div className={styles.empty}>Aucun contact</div>}
+            {!directory.length && <div className={styles.empty}>{search.trim().length < 2 ? 'Recherchez un utilisateur ou une boutique' : 'Aucun résultat'}</div>}
           </div>
           <div className={styles.encryption}><strong>WakhReek Communication</strong></div>
         </aside>
