@@ -20,12 +20,17 @@ function getAttribution(){
   return JSON.parse(localStorage.getItem(ATTR_KEY)||'{}')
  }catch{return {}}
 }
+async function detectCountry(fallback){
+ if(fallback)return fallback.toUpperCase()
+ try{const r=await fetch('/api/analytics/geo',{cache:'no-store'});if(!r.ok)return null;const d=await r.json();return d?.country||null}catch{return null}
+}
 export async function trackWakhReekEvent(eventName,metadata={}){
  if(typeof window==='undefined')return
  const a=getAttribution();let userId=null
  try{const{data}=await supabase.auth.getUser();userId=data?.user?.id||null}catch{}
  let referrerHost=null;try{referrerHost=document.referrer?new URL(document.referrer).hostname:null}catch{}
- await supabase.from('market_analytics_events').insert({event_name:eventName,user_id:userId,session_id:getSession(),country_code:a.country?.toUpperCase()||null,source:a.source||'direct',medium:a.medium||null,campaign:a.campaign||null,content:a.content||null,landing_path:getLanding(),referrer_host:referrerHost,metadata})
+ const country=await detectCountry(a.country)
+ await supabase.from('market_analytics_events').insert({event_name:eventName,user_id:userId,session_id:getSession(),country_code:country,source:a.source||'direct',medium:a.medium||null,campaign:a.campaign||null,content:a.content||null,landing_path:getLanding(),referrer_host:referrerHost,metadata})
 }
 function trackNewUser(user){if(!user?.id||!user.created_at)return;try{const age=Date.now()-new Date(user.created_at).getTime(),key=`${SIGNUP_KEY}:${user.id}`;if(age>=0&&age<10*60*1000&&!localStorage.getItem(key)){localStorage.setItem(key,'1');trackWakhReekEvent('signup',{method:'supabase_auth'})}}catch{}}
 export default function AnalyticsTracker(){
