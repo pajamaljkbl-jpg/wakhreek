@@ -50,7 +50,7 @@ export default function Home() {
 
   return <main className="wr-landing">
     <header className="wr-topbar"><div className="wr-top-brand"><span className="wr-mini-logo">WR</span><strong>WakhReek <span>- Onley Took</span></strong></div><div className="wr-top-actions"><span>◎</span><i></i><span>👤&nbsp; {tr('help', 'Aide')}</span></div></header>
-    <section className="wr-auth-card">
+    <div style={{display:'flex',gap:'18px',alignItems:'flex-start',justifyContent:'center',flexWrap:'wrap',width:'100%'}}><section className="wr-auth-card">
       <img className="wr-official-logo" src="/wakhreek-logo.svg?v=3" alt="WakhReek" />
       <p className="wr-subtitle">{tr('subtitle', 'Inscris-toi pour accéder aux boutiques et à la messagerie.')}</p>
       <div className="wr-mode-tabs" role="tablist" aria-label={tr('tabsLabel', 'Inscription ou connexion')}><button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage('') }}>{tr('signupTab', 'Inscription')}</button><button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage('') }}>{tr('loginTab', 'Connexion')}</button></div>
