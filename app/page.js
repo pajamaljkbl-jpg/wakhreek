@@ -50,7 +50,7 @@ export default function Home() {
 
   return <main className="wr-landing">
     <header className="wr-topbar"><div className="wr-top-brand"><span className="wr-mini-logo">WR</span><strong>WakhReek <span>- Onley Took</span></strong></div><div className="wr-top-actions"><span>◎</span><i></i><span>👤&nbsp; {tr('help', 'Aide')}</span></div></header>
-    <section className="wr-auth-card">
+    <div style={{display:'flex',gap:'18px',alignItems:'flex-start',justifyContent:'center',flexWrap:'wrap',width:'100%'}}><section className="wr-auth-card">
       <img className="wr-official-logo" src="/wakhreek-logo.svg?v=3" alt="WakhReek" />
       <p className="wr-subtitle">{tr('subtitle', 'Inscris-toi pour accéder aux boutiques et à la messagerie.')}</p>
       <div className="wr-mode-tabs" role="tablist" aria-label={tr('tabsLabel', 'Inscription ou connexion')}><button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => { setMode('signup'); setMessage('') }}>{tr('signupTab', 'Inscription')}</button><button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => { setMode('login'); setMessage('') }}>{tr('loginTab', 'Connexion')}</button></div>
@@ -66,6 +66,6 @@ export default function Home() {
       <p className="wr-foot">{tr('acceptPrefix', 'En continuant, tu acceptes nos')} <a href="#">{tr('terms', 'Conditions d’utilisation')}</a><br />{tr('andPrivacy', 'et notre')} <a href="#">{tr('privacy', 'Politique de confidentialité.')}</a></p>
       <div className="wr-switch-line"><span>{mode === 'signup' ? tr('alreadyAccount', 'Tu as déjà un compte ?') : tr('noAccount', 'Tu n’as pas encore de compte ?')}</span><button type="button" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setMessage('') }}>{mode === 'signup' ? tr('loginButton', 'Se connecter') : tr('createAccount', 'Créer un compte')}</button></div>
       <div className="wr-benefits"><div><b>👜</b><span><strong>{tr('shops', 'Boutiques')}</strong><small>{tr('buySell', 'Achète et vends')}</small></span></div><div><b>💬</b><span><strong>{tr('messaging', 'Messagerie')}</strong><small>{tr('safeExchange', 'Échange en sécurité')}</small></span></div><div><b>👥</b><span><strong>{tr('community', 'Communauté')}</strong><small>{tr('stayConnected', 'Reste connecté')}</small></span></div></div>
-    </section>
+    </section><div style={{display:'grid',gap:'12px',width:'min(420px,calc(100vw - 32px))'}}><video controls playsInline preload="metadata" src="/tutorial-77.mp4" style={{width:'100%',borderRadius:'18px',background:'#000',boxShadow:'0 10px 26px rgba(76,34,0,.28)'}} /><video controls playsInline preload="metadata" src="/tutorial-78.mp4" style={{width:'100%',borderRadius:'18px',background:'#000',boxShadow:'0 10px 26px rgba(76,34,0,.28)'}} /></div></div>
   </main>
 }
