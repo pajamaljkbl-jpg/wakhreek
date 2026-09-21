@@ -37,7 +37,7 @@ export default function AppShell({ children, title }) {
     <nav className="app-tabs" aria-label={t('mainNavigation')} data-no-translate>
       <Link className={pathname === '/communication' ? 'active' : ''} href="/communication">{t('communication')}</Link>
       <Link className={pathname === '/market' ? 'active' : ''} href="/market">{t('market')}</Link>
-      <Link className={pathname === '/tv' ? 'active' : ''} href="/tv">{t('tv')}</Link>
+      <Link className={pathname === '/social' ? 'active' : ''} href="/social">Social</Link>
     </nav>
     <section className="app-page">
       {title && <div className="app-page-title"><h1>{title}</h1></div>}
