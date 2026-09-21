@@ -14,6 +14,10 @@ export default function SocialPage(){
   const [publishing,setPublishing]=useState(false)
   const [media,setMedia]=useState([])
   const [uploadProgress,setUploadProgress]=useState(0)
+  const [likes,setLikes]=useState([])
+  const [comments,setComments]=useState([])
+  const [openComments,setOpenComments]=useState(null)
+  const [commentDraft,setCommentDraft]=useState('')
 
   const loadPosts=useCallback(async()=>{
     setLoading(true)
@@ -46,6 +50,19 @@ export default function SocialPage(){
     }
 
     setPosts(rows.map(post=>({...post,profile:profiles[post.author_id]||null})))
+
+    const ids=rows.map(post=>post.id)
+    if(ids.length){
+      const [{data:likeRows},{data:commentRows}]=await Promise.all([
+        supabase.from('social_likes').select('post_id,user_id').in('post_id',ids),
+        supabase.from('social_comments').select('id,post_id,author_id,body,created_at').in('post_id',ids).order('created_at',{ascending:true})
+      ])
+      setLikes(likeRows||[])
+      setComments(commentRows||[])
+    }else{
+      setLikes([])
+      setComments([])
+    }
     setLoading(false)
   },[])
 
@@ -118,6 +135,43 @@ export default function SocialPage(){
     await loadPosts()
     setPublishing(false)
     setUploadProgress(0)
+  }
+
+  function liked(postId){
+    return !!user&&likes.some(item=>item.post_id===postId&&item.user_id===user.id)
+  }
+
+  async function toggleLike(postId){
+    if(!user)return
+    if(liked(postId)){
+      const {error:likeError}=await supabase.from('social_likes').delete().eq('post_id',postId).eq('user_id',user.id)
+      if(!likeError)setLikes(current=>current.filter(item=>!(item.post_id===postId&&item.user_id===user.id)))
+    }else{
+      const {error:likeError}=await supabase.from('social_likes').insert({post_id:postId,user_id:user.id})
+      if(!likeError)setLikes(current=>[...current,{post_id:postId,user_id:user.id}])
+    }
+  }
+
+  async function addComment(postId){
+    const body=commentDraft.trim()
+    if(!user||!body)return
+    const {data,error:commentError}=await supabase.from('social_comments').insert({post_id:postId,author_id:user.id,body}).select('id,post_id,author_id,body,created_at').single()
+    if(commentError){setError(commentError.message);return}
+    setComments(current=>[...current,data])
+    setCommentDraft('')
+  }
+
+  async function sharePost(post){
+    const url=window.location.origin+'/social#post-'+post.id
+    try{
+      if(navigator.share)await navigator.share({title:'WakhReek Social',text:(post.body||'WakhReek Social').slice(0,180),url})
+      else{
+        await navigator.clipboard.writeText(url)
+        alert('Lien copié')
+      }
+    }catch(error){
+      if(error?.name!=='AbortError')setError('Partage indisponible.')
+    }
   }
 
   function mediaFor(post){
@@ -209,6 +263,22 @@ export default function SocialPage(){
                       ?<video key={index} src={item.media_url} controls playsInline preload="metadata"/>
                       :<img key={index} src={item.media_url} alt=""/>)}
                   </div>}
+                  <div className="socialPostActions">
+                    <button type="button" className={liked(post.id)?'liked':''} onClick={()=>toggleLike(post.id)}>♥ J’aime <span>{likes.filter(item=>item.post_id===post.id).length||''}</span></button>
+                    <button type="button" onClick={()=>{setOpenComments(openComments===post.id?null:post.id);setCommentDraft('')}}>💬 Commenter <span>{comments.filter(item=>item.post_id===post.id).length||''}</span></button>
+                    <button type="button" onClick={()=>sharePost(post)}>↗ Partager</button>
+                  </div>
+                  {openComments===post.id&&<div className="socialComments">
+                    {comments.filter(item=>item.post_id===post.id).map(comment=><div className="socialComment" key={comment.id}>
+                      <b>{comment.author_id===user?.id?'Vous':'WakhReek'}</b>
+                      <p>{comment.body}</p>
+                    </div>)}
+                    {user&&<div className="socialCommentBox">
+                      <input value={commentDraft} maxLength={1000} onChange={event=>setCommentDraft(event.target.value)} placeholder="Écrire un commentaire…"
+                        onKeyDown={event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment(post.id)}}}/>
+                      <button type="button" disabled={!commentDraft.trim()} onClick={()=>addComment(post.id)}>Envoyer</button>
+                    </div>}
+                  </div>}
                 </article>
               })}
             </section>}
@@ -236,7 +306,7 @@ export default function SocialPage(){
         .socialCleanComposer>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #edf1f5;padding-top:10px}.socialCleanComposer small{color:#667085}.socialMediaButton{display:inline-flex;align-items:center;border-radius:10px;background:#eef6ff;color:#087af0;font-weight:900;padding:9px 12px;cursor:pointer}.socialMediaButton input{display:none}.socialMediaSelection{display:grid!important;gap:6px!important;border-top:1px solid #edf1f5!important;padding:10px 0!important}.socialMediaSelection>div{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f7f9fc;border-radius:9px;padding:7px 10px}.socialMediaSelection span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socialMediaSelection button{padding:2px 8px!important;background:#fff!important;color:#b42318!important;border:1px solid #fecdca!important}.socialUploadTrack{height:6px!important;padding:0!important;border:0!important;background:#e6edf5;border-radius:999px;overflow:hidden;margin:7px 0}.socialUploadTrack span{display:block;height:100%;background:#087af0;transition:width .2s}.socialCleanComposer button,.socialFeedState button{border:0;border-radius:10px;background:#087af0;color:#fff;font-weight:900;padding:10px 18px}.socialCleanComposer button:disabled{opacity:.45}
         .socialCleanFeed{display:grid;gap:14px}.socialCleanPost{overflow:hidden}.socialCleanPost header{display:flex;align-items:center;gap:10px;padding:14px}.socialCleanPost header img,.socialCleanPost header>span{width:44px;height:44px;border-radius:50%}
         .socialCleanPost header img{object-fit:cover}.socialCleanPost header>span{display:grid;place-items:center;background:#087af0;color:#fff;font-weight:900}.socialCleanPost header div{display:grid}.socialCleanPost header a{font-weight:900;text-decoration:none}.socialCleanPost header small{color:#667085;margin-top:3px}
-        .socialCleanPost>p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:0 14px 14px;line-height:1.55}.socialCleanMedia{display:grid;gap:2px;background:#eef2f6}.socialCleanMedia img,.socialCleanMedia video{display:block;width:100%;max-height:650px;object-fit:contain;background:#050505}
+        .socialCleanPost>p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:0 14px 14px;line-height:1.55}.socialPostActions{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #edf1f5}.socialPostActions button{border:0;border-right:1px solid #edf1f5;background:#fff;padding:12px 6px;font-weight:800;color:#526174}.socialPostActions button:last-child{border-right:0}.socialPostActions button.liked{color:#d92d20}.socialPostActions span{font-weight:900}.socialComments{padding:12px 14px;border-top:1px solid #edf1f5}.socialComment{background:#f4f7fa;border-radius:12px;padding:9px 11px;margin-bottom:8px}.socialComment b{font-size:13px}.socialComment p{margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.socialCommentBox{display:flex;gap:8px}.socialCommentBox input{flex:1;min-width:0;border:1px solid #dce5ef;border-radius:999px;padding:10px 13px}.socialCommentBox button{border:0;border-radius:999px;background:#087af0;color:#fff;font-weight:900;padding:9px 14px}.socialCommentBox button:disabled{opacity:.45}.socialCleanMedia{display:grid;gap:2px;background:#eef2f6}.socialCleanMedia img,.socialCleanMedia video{display:block;width:100%;max-height:650px;object-fit:contain;background:#050505}
         .socialFeedState,.socialFeedError{padding:24px;text-align:center}.socialFeedState{color:#667085}.socialFeedState button{display:block;margin:12px auto 0}.socialFeedError{margin-bottom:14px;color:#b42318;background:#fff6f5;border-color:#fecdca}
         @media(max-width:980px){.socialCleanLayout{grid-template-columns:180px minmax(0,1fr)}.socialCleanRight{display:none}}
         @media(max-width:720px){.socialClean{padding:0 8px 24px}.socialBrandSearch{display:none}.socialSectionNav{overflow-x:auto;justify-content:flex-start}.socialCleanLayout{display:block}.socialCleanLeft{position:static;display:flex;overflow-x:auto;margin-bottom:12px}.socialCleanLeft a,.socialCleanLeft span{white-space:nowrap}.socialCleanPost header{padding:12px}}
