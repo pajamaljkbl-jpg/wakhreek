@@ -18,6 +18,10 @@ export default function SocialPage(){
   const [comments,setComments]=useState([])
   const [openComments,setOpenComments]=useState(null)
   const [commentDraft,setCommentDraft]=useState('')
+  const [people,setPeople]=useState([])
+  const [friends,setFriends]=useState([])
+  const [requests,setRequests]=useState([])
+  const [sentRequests,setSentRequests]=useState([])
 
   const loadPosts=useCallback(async()=>{
     setLoading(true)
@@ -69,11 +73,44 @@ export default function SocialPage(){
   useEffect(()=>{
     let active=true
     supabase.auth.getUser().then(({data})=>{
-      if(active)setUser(data?.user||null)
+      if(active){setUser(data?.user||null);if(data?.user)loadPeopleAndFriends(data.user)}
     })
     loadPosts()
     return()=>{active=false}
   },[loadPosts])
+
+  async function loadPeopleAndFriends(currentUser){
+    const [{data:peopleRows},{data:friendRows},{data:requestRows},{data:sentRows}]=await Promise.all([
+      supabase.from('profiles').select('id,display_name,avatar_url,country_code').neq('id',currentUser.id).order('created_at',{ascending:false}).limit(12),
+      supabase.from('friends').select('friend_id').eq('user_id',currentUser.id),
+      supabase.from('friend_requests').select('id,sender_id,status').eq('receiver_id',currentUser.id).eq('status','pending'),
+      supabase.from('friend_requests').select('id,receiver_id,status').eq('sender_id',currentUser.id).eq('status','pending')
+    ])
+    const friendIds=(friendRows||[]).map(row=>row.friend_id)
+    let friendProfiles=[]
+    if(friendIds.length){
+      const {data}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').in('id',friendIds)
+      friendProfiles=data||[]
+    }
+    setPeople(peopleRows||[])
+    setFriends(friendProfiles)
+    setRequests(requestRows||[])
+    setSentRequests(sentRows||[])
+  }
+
+  async function sendFriendRequest(personId){
+    if(!user||personId===user.id||friends.some(friend=>friend.id===personId)||sentRequests.some(request=>request.receiver_id===personId))return
+    const {data,error:requestError}=await supabase.from('friend_requests').insert({sender_id:user.id,receiver_id:personId,status:'pending'}).select('id,receiver_id,status').single()
+    if(requestError){setError(requestError.message);return}
+    setSentRequests(current=>[...current,data])
+  }
+
+  async function respondFriendRequest(requestId,accept){
+    if(!user)return
+    const {error:requestError}=await supabase.rpc('respond_friend_request',{request_id:requestId,accept_request:accept})
+    if(requestError){setError(requestError.message);return}
+    await loadPeopleAndFriends(user)
+  }
 
   async function publish(){
     const body=draft.trim()
@@ -202,9 +239,25 @@ export default function SocialPage(){
         <aside className="socialCleanLeft">
           <Link className="active" href="/social">🏠 Accueil</Link>
           {user&&<Link href={'/social/profile/'+user.id}>👤 Mon profil</Link>}
-          <span>🤝 Amis</span>
+          <a href="#friends">🤝 Amis {requests.length>0&&<b className="requestBadge">{requests.length}</b>}</a>
           <span>👥 Groupes</span>
           <span>📅 Événements</span>
+          {user&&<section className="socialFriendsPanel" id="friends">
+            {requests.length>0&&<><h3>Demandes</h3>{requests.map(request=>{
+              const person=people.find(item=>item.id===request.sender_id)
+              return <div className="socialPerson" key={request.id}>
+                <Link href={'/social/profile/'+request.sender_id}>{person?.display_name||'WakhReek'}</Link>
+                <span><button onClick={()=>respondFriendRequest(request.id,true)}>✓</button><button onClick={()=>respondFriendRequest(request.id,false)}>×</button></span>
+              </div>
+            })}</>}
+            <h3>Amis</h3>
+            {friends.length?friends.slice(0,8).map(friend=><Link className="socialFriendLink" href={'/social/profile/'+friend.id} key={friend.id}>{friend.avatar_url?<img src={friend.avatar_url} alt=""/>:<i>WR</i>}<span>{friend.display_name||'WakhReek'}</span></Link>):<small>Aucun ami pour le moment</small>}
+            <h3>Personnes</h3>
+            {people.filter(person=>!friends.some(friend=>friend.id===person.id)).slice(0,6).map(person=><div className="socialPerson" key={person.id}>
+              <Link href={'/social/profile/'+person.id}>{person.display_name||'WakhReek'}</Link>
+              <button disabled={sentRequests.some(request=>request.receiver_id===person.id)} onClick={()=>sendFriendRequest(person.id)}>{sentRequests.some(request=>request.receiver_id===person.id)?'✓':'＋'}</button>
+            </div>)}
+          </section>}
         </aside>
 
         <section className="socialCleanCenter">
@@ -299,7 +352,7 @@ export default function SocialPage(){
         .socialSectionNav a,.socialSectionNav span{padding:9px 15px;border-radius:10px;text-decoration:none;font-weight:800;color:#526174}.socialSectionNav a{background:#eef6ff;color:#087af0}
         .socialCleanLayout{display:grid;grid-template-columns:200px minmax(0,720px) 220px;justify-content:center;gap:16px;align-items:start}
         .socialCleanLeft,.socialCleanRight{position:sticky;top:96px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}
-        .socialCleanLeft{display:grid;gap:5px}.socialCleanLeft a,.socialCleanLeft span{padding:11px;border-radius:10px;text-decoration:none;font-weight:700;color:#526174}.socialCleanLeft .active{background:#eef6ff;color:#087af0}
+        .socialCleanLeft{display:grid;gap:5px}.socialCleanLeft>a,.socialCleanLeft>span{padding:11px;border-radius:10px;text-decoration:none;font-weight:700;color:#526174}.socialCleanLeft .active{background:#eef6ff;color:#087af0}.requestBadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#d92d20;color:#fff;font-size:11px}.socialFriendsPanel{border-top:1px solid #e7edf4;margin-top:7px;padding-top:8px;min-width:0}.socialFriendsPanel h3{font-size:13px;margin:10px 4px 6px;color:#667085}.socialFriendsPanel>small{display:block;padding:4px;color:#667085}.socialFriendLink,.socialPerson{display:flex;align-items:center;gap:7px;padding:6px 4px!important;text-decoration:none!important}.socialFriendLink img,.socialFriendLink i{width:30px;height:30px;border-radius:50%;object-fit:cover}.socialFriendLink i{display:grid;place-items:center;background:#087af0;color:#fff;font-size:9px;font-style:normal}.socialFriendLink span{min-width:0;padding:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.socialPerson>a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;font-size:12px}.socialPerson>span{display:flex;padding:0!important}.socialPerson button{border:0;border-radius:8px;background:#087af0;color:#fff;font-weight:900;padding:5px 8px}.socialPerson button:disabled{opacity:.45}
         .socialCleanRight p{color:#667085;font-size:13px;line-height:1.5}
         .socialCleanCenter{min-width:0}.socialCleanComposer,.socialCleanPost,.socialFeedState,.socialFeedError{background:#fff;border:1px solid #dce5ef;border-radius:16px}
         .socialCleanComposer{padding:14px;margin-bottom:14px}.socialCleanComposer textarea{display:block;width:100%;min-height:105px;resize:vertical;border:0;outline:0;font:inherit;font-size:16px}
