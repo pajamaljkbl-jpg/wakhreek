@@ -23,6 +23,8 @@ export default function SocialPage(){
   const [requests,setRequests]=useState([])
   const [sentRequests,setSentRequests]=useState([])
   const [boutiques,setBoutiques]=useState([])
+  const [boutiqueCountries,setBoutiqueCountries]=useState({})
+  const [boutiqueCities,setBoutiqueCities]=useState({})
 
   const loadPosts=useCallback(async()=>{
     setLoading(true)
@@ -84,11 +86,20 @@ export default function SocialPage(){
   async function loadBoutiques(){
     const {data}=await supabase
       .from('boutiques')
-      .select('id,name,description,type,rating,logo_url')
+      .select('id,name,type,plan,rating,logo_url,country_id,city_id')
       .eq('is_live',true)
-      .order('rating',{ascending:false})
+      .order('created_at',{ascending:false})
       .limit(8)
-    setBoutiques(data||[])
+    const rows=data||[]
+    setBoutiques(rows)
+    const countryIds=[...new Set(rows.map(item=>item.country_id).filter(Boolean))]
+    const cityIds=[...new Set(rows.map(item=>item.city_id).filter(Boolean))]
+    const [{data:countries},{data:cities}]=await Promise.all([
+      countryIds.length?supabase.from('countries').select('id,name_fr').in('id',countryIds):Promise.resolve({data:[]}),
+      cityIds.length?supabase.from('cities').select('id,name').in('id',cityIds):Promise.resolve({data:[]})
+    ])
+    setBoutiqueCountries(Object.fromEntries((countries||[]).map(item=>[item.id,item.name_fr])))
+    setBoutiqueCities(Object.fromEntries((cities||[]).map(item=>[item.id,item.name])))
   }
 
   async function loadPeopleAndFriends(currentUser){
@@ -350,17 +361,18 @@ export default function SocialPage(){
         </section>
 
         <aside className="socialCleanRight">
-          <div className="boutiqueHead"><b>🛍️ Boutiques</b><Link href="/market">Voir tout</Link></div>
-          <p className="boutiqueIntro">Découvrez les boutiques WakhReek.</p>
-          <div className="boutiqueList">
-            {boutiques.map(boutique=><Link className="boutiqueCard" href={'/market/boutique/'+boutique.id} key={boutique.id}>
-              {boutique.logo_url?<img src={boutique.logo_url} alt=""/>:<span>WR</span>}
+          <h2>Boutiques actives</h2>
+          <div className="socialMarketShops">
+            {boutiques.map(boutique=><article key={boutique.id} onClick={()=>location.href={'/market/boutique/'+boutique.id}>
+              <div className="socialMarketLogo">{boutique.logo_url?<img src={boutique.logo_url} alt={boutique.name}/>:'🏪'}</div>
               <div>
-                <strong>{boutique.name}</strong>
-                <small>{boutique.type||'Boutique'}{boutique.rating?(' · ★ '+boutique.rating):''}</small>
+                <h3>{boutique.name}</h3>
+                <small>{boutique.type==='physique'?'Boutique physique':boutique.type==='en_ligne'?'Boutique en ligne':boutique.type==='les_deux'?'Physique + en ligne':'Boutique'}</small>
+                <p>📍 {boutiqueCountries[boutique.country_id]||''}{boutiqueCities[boutique.city_id]?(' · '+boutiqueCities[boutique.city_id]):''}</p>
+                <p>⭐ {Number(boutique.rating||0).toFixed(1)} · {boutique.plan==='company_unlimited'?'Entreprise':boutique.plan==='pro_45'?'45 Produits':'15 Produits'}</p>
+                <button type="button">Entrer dans la boutique →</button>
               </div>
-            </Link>)}
-            {boutiques.length===0&&<small className="boutiqueEmpty">Aucune boutique disponible.</small>}
+            </article>)}
           </div>
         </aside>
       </div>
@@ -375,7 +387,7 @@ export default function SocialPage(){
         .socialCleanLayout{display:grid;grid-template-columns:200px minmax(0,720px) 220px;justify-content:center;gap:16px;align-items:start}
         .socialCleanLeft,.socialCleanRight{position:sticky;top:96px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}
         .socialCleanLeft{display:grid;gap:5px}.socialCleanLeft>a,.socialCleanLeft>span{padding:11px;border-radius:10px;text-decoration:none;font-weight:700;color:#526174}.socialCleanLeft .active{background:#eef6ff;color:#087af0}.requestBadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#d92d20;color:#fff;font-size:11px}.socialFriendsPanel{border-top:1px solid #e7edf4;margin-top:7px;padding-top:8px;min-width:0}.socialFriendsPanel h3{font-size:13px;margin:10px 4px 6px;color:#667085}.socialFriendsPanel>small{display:block;padding:4px;color:#667085}.socialFriendLink,.socialPerson{display:flex;align-items:center;gap:7px;padding:6px 4px!important;text-decoration:none!important}.socialFriendLink img,.socialFriendLink i{width:30px;height:30px;border-radius:50%;object-fit:cover}.socialFriendLink i{display:grid;place-items:center;background:#087af0;color:#fff;font-size:9px;font-style:normal}.socialFriendLink span{min-width:0;padding:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.socialPerson>a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;font-size:12px}.socialPerson>span{display:flex;padding:0!important}.socialPerson button{border:0;border-radius:8px;background:#087af0;color:#fff;font-weight:900;padding:5px 8px}.socialPerson button:disabled{opacity:.45}
-        .socialCleanRight p{color:#667085;font-size:13px;line-height:1.5}.boutiqueHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.boutiqueHead>a{font-size:12px;color:#087af0;text-decoration:none;font-weight:800}.boutiqueIntro{margin:7px 0 10px}.boutiqueList{display:grid;gap:7px}.boutiqueCard{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #e7edf4;border-radius:12px;text-decoration:none;background:#fff;transition:.15s}.boutiqueCard:hover{border-color:#9dcbfb;background:#f7fbff}.boutiqueCard>img,.boutiqueCard>span{width:42px;height:42px;border-radius:10px;flex:0 0 42px}.boutiqueCard>img{object-fit:cover}.boutiqueCard>span{display:grid;place-items:center;background:#087af0;color:#fff;font-weight:900}.boutiqueCard>div{min-width:0;display:grid}.boutiqueCard strong{color:#172033;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.boutiqueCard small{color:#667085;font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.boutiqueEmpty{color:#667085;padding:8px 2px}
+        .socialCleanRight h2{margin:2px 0 12px;font-size:20px}.socialMarketShops{display:grid;gap:10px}.socialMarketShops article{background:white;border:1px solid #e1e6ee;border-radius:12px;padding:12px;display:flex;gap:10px;cursor:pointer;transition:.15s}.socialMarketShops article:hover{transform:translateY(-2px);box-shadow:0 8px 22px #00000012}.socialMarketLogo{width:52px;height:52px;flex:0 0 52px;border-radius:50%;background:#eff5ea;display:grid;place-items:center;font-size:26px;overflow:hidden}.socialMarketLogo img{width:100%;height:100%;object-fit:cover}.socialMarketShops article>div:last-child{min-width:0}.socialMarketShops h3{margin:2px 0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socialMarketShops small,.socialMarketShops p{color:#667085;font-size:11px}.socialMarketShops p{margin:7px 0}.socialMarketShops button{border:0;border-radius:8px;padding:7px 9px;background:#0875e8;color:white;font-weight:800;cursor:pointer;font-size:11px}
         .socialCleanCenter{min-width:0}.socialCleanComposer,.socialCleanPost,.socialFeedState,.socialFeedError{background:#fff;border:1px solid #dce5ef;border-radius:16px}
         .socialCleanComposer{padding:14px;margin-bottom:14px}.socialCleanComposer textarea{display:block;width:100%;min-height:105px;resize:vertical;border:0;outline:0;font:inherit;font-size:16px}
         .socialCleanComposer>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #edf1f5;padding-top:10px}.socialCleanComposer small{color:#667085}.socialMediaButton{display:inline-flex;align-items:center;border-radius:10px;background:#eef6ff;color:#087af0;font-weight:900;padding:9px 12px;cursor:pointer}.socialMediaButton input{display:none}.socialMediaSelection{display:grid!important;gap:6px!important;border-top:1px solid #edf1f5!important;padding:10px 0!important}.socialMediaSelection>div{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f7f9fc;border-radius:9px;padding:7px 10px}.socialMediaSelection span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socialMediaSelection button{padding:2px 8px!important;background:#fff!important;color:#b42318!important;border:1px solid #fecdca!important}.socialUploadTrack{height:6px!important;padding:0!important;border:0!important;background:#e6edf5;border-radius:999px;overflow:hidden;margin:7px 0}.socialUploadTrack span{display:block;height:100%;background:#087af0;transition:width .2s}.socialCleanComposer button,.socialFeedState button{border:0;border-radius:10px;background:#087af0;color:#fff;font-weight:900;padding:10px 18px}.socialCleanComposer button:disabled{opacity:.45}
