@@ -12,6 +12,8 @@ export default function SocialPage(){
   const [error,setError]=useState('')
   const [draft,setDraft]=useState('')
   const [publishing,setPublishing]=useState(false)
+  const [media,setMedia]=useState([])
+  const [uploadProgress,setUploadProgress]=useState(0)
 
   const loadPosts=useCallback(async()=>{
     setLoading(true)
@@ -58,27 +60,64 @@ export default function SocialPage(){
 
   async function publish(){
     const body=draft.trim()
-    if(!user||!body||publishing)return
+    if(!user||(!body&&!media.length)||publishing)return
 
     setPublishing(true)
     setError('')
+    setUploadProgress(0)
+
+    const allowed=['image/jpeg','image/png','image/webp','video/mp4','video/webm']
+    if(media.some(file=>!allowed.includes(file.type)||file.size>52428800)){
+      setError('Format non supporté ou fichier supérieur à 50 Mo.')
+      setPublishing(false)
+      return
+    }
+
+    const uploaded=[]
+    for(let i=0;i<media.length;i++){
+      const file=media[i]
+      const type=file.type.startsWith('video/')?'video':'image'
+      const ext=(file.name.split('.').pop()||'bin').toLowerCase()
+      const path=user.id+'/'+Date.now()+'-'+crypto.randomUUID()+'.'+ext
+      const {error:uploadError}=await supabase.storage.from('social-media').upload(path,file,{contentType:file.type,upsert:false})
+
+      if(uploadError){
+        setError('Envoi du média impossible : '+uploadError.message)
+        setPublishing(false)
+        setUploadProgress(0)
+        return
+      }
+
+      uploaded.push({
+        media_type:type,
+        media_url:supabase.storage.from('social-media').getPublicUrl(path).data.publicUrl,
+        sort_order:i
+      })
+      setUploadProgress(Math.round(((i+1)/Math.max(media.length,1))*75))
+    }
+
+    const first=uploaded[0]||null
     const {error:publishError}=await supabase.rpc('create_social_post',{
-      p_body:body,
-      p_media_type:null,
-      p_media_url:null,
+      p_body:body||null,
+      p_media_type:first?.media_type||null,
+      p_media_url:first?.media_url||null,
       p_group_id:null,
-      p_media_items:[]
+      p_media_items:uploaded
     })
 
     if(publishError){
       setError(publishError.message||'Publication impossible.')
       setPublishing(false)
+      setUploadProgress(0)
       return
     }
 
+    setUploadProgress(100)
     setDraft('')
+    setMedia([])
     await loadPosts()
     setPublishing(false)
+    setUploadProgress(0)
   }
 
   function mediaFor(post){
@@ -122,9 +161,24 @@ export default function SocialPage(){
               onChange={event=>setDraft(event.target.value)}
               placeholder="Quoi de neuf ?"
             />
+            {media.length>0&&<div className="socialMediaSelection">
+              {media.map((file,index)=><div key={file.name+index}>
+                <span>{file.type.startsWith('video/')?'🎬':'🖼️'} {file.name}</span>
+                <button type="button" disabled={publishing} onClick={()=>setMedia(current=>current.filter((_,i)=>i!==index))}>×</button>
+              </div>)}
+            </div>}
+            {publishing&&media.length>0&&<div className="socialUploadTrack"><span style={{width:uploadProgress+'%'}}/></div>}
             <div>
-              <small>{draft.length}/3000</small>
-              <button type="button" disabled={!draft.trim()||publishing} onClick={publish}>
+              <label className="socialMediaButton">＋ Photo / Vidéo
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" disabled={publishing}
+                  onChange={event=>{
+                    const chosen=Array.from(event.target.files||[])
+                    setMedia(current=>[...current,...chosen].slice(0,10))
+                    event.target.value=''
+                  }}/>
+              </label>
+              <small>{draft.length}/3000 · {media.length}/10</small>
+              <button type="button" disabled={(!draft.trim()&&!media.length)||publishing} onClick={publish}>
                 {publishing?'Publication…':'Publier'}
               </button>
             </div>
@@ -179,8 +233,7 @@ export default function SocialPage(){
         .socialCleanRight p{color:#667085;font-size:13px;line-height:1.5}
         .socialCleanCenter{min-width:0}.socialCleanComposer,.socialCleanPost,.socialFeedState,.socialFeedError{background:#fff;border:1px solid #dce5ef;border-radius:16px}
         .socialCleanComposer{padding:14px;margin-bottom:14px}.socialCleanComposer textarea{display:block;width:100%;min-height:105px;resize:vertical;border:0;outline:0;font:inherit;font-size:16px}
-        .socialCleanComposer>div{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #edf1f5;padding-top:10px}.socialCleanComposer small{color:#667085}
-        .socialCleanComposer button,.socialFeedState button{border:0;border-radius:10px;background:#087af0;color:#fff;font-weight:900;padding:10px 18px}.socialCleanComposer button:disabled{opacity:.45}
+        .socialCleanComposer>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #edf1f5;padding-top:10px}.socialCleanComposer small{color:#667085}.socialMediaButton{display:inline-flex;align-items:center;border-radius:10px;background:#eef6ff;color:#087af0;font-weight:900;padding:9px 12px;cursor:pointer}.socialMediaButton input{display:none}.socialMediaSelection{display:grid!important;gap:6px!important;border-top:1px solid #edf1f5!important;padding:10px 0!important}.socialMediaSelection>div{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f7f9fc;border-radius:9px;padding:7px 10px}.socialMediaSelection span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socialMediaSelection button{padding:2px 8px!important;background:#fff!important;color:#b42318!important;border:1px solid #fecdca!important}.socialUploadTrack{height:6px!important;padding:0!important;border:0!important;background:#e6edf5;border-radius:999px;overflow:hidden;margin:7px 0}.socialUploadTrack span{display:block;height:100%;background:#087af0;transition:width .2s}.socialCleanComposer button,.socialFeedState button{border:0;border-radius:10px;background:#087af0;color:#fff;font-weight:900;padding:10px 18px}.socialCleanComposer button:disabled{opacity:.45}
         .socialCleanFeed{display:grid;gap:14px}.socialCleanPost{overflow:hidden}.socialCleanPost header{display:flex;align-items:center;gap:10px;padding:14px}.socialCleanPost header img,.socialCleanPost header>span{width:44px;height:44px;border-radius:50%}
         .socialCleanPost header img{object-fit:cover}.socialCleanPost header>span{display:grid;place-items:center;background:#087af0;color:#fff;font-weight:900}.socialCleanPost header div{display:grid}.socialCleanPost header a{font-weight:900;text-decoration:none}.socialCleanPost header small{color:#667085;margin-top:3px}
         .socialCleanPost>p{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:0 14px 14px;line-height:1.55}.socialCleanMedia{display:grid;gap:2px;background:#eef2f6}.socialCleanMedia img,.socialCleanMedia video{display:block;width:100%;max-height:650px;object-fit:contain;background:#050505}
