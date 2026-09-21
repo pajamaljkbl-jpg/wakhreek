@@ -14,10 +14,18 @@ export default function SocialPage(){
  useEffect(()=>{supabase.auth.getUser().then(({data})=>{setUser(data?.user||null);load(data?.user||null);loadPosts()})},[])
  async function loadPosts(){
   setLoadingPosts(true)
-  const {data,error}=await supabase.from('social_posts').select('id,author_id,body,media_type,media_url,boutique_id,created_at,media_items,profiles!social_posts_author_id_fkey(display_name,avatar_url)').order('created_at',{ascending:false}).limit(20)
+  const {data,error}=await supabase.from('social_posts').select('id,author_id,body,media_type,media_url,boutique_id,created_at,media_items').order('created_at',{ascending:false}).limit(20)
   if(!error){
-   setPosts(data||[])
-   const ids=(data||[]).map(x=>x.id)
+   const authorIds=[...new Set((data||[]).map(x=>x.author_id).filter(Boolean))]
+   let profileMap={}
+   if(authorIds.length){
+    const {data:authorProfiles,error:profileError}=await supabase.from('profiles').select('id,display_name,avatar_url').in('id',authorIds)
+    if(profileError)console.error('WakhReek Social profile load error',profileError)
+    else profileMap=Object.fromEntries((authorProfiles||[]).map(x=>[x.id,x]))
+   }
+   const feed=(data||[]).map(x=>({...x,profiles:profileMap[x.author_id]||null}))
+   setPosts(feed)
+   const ids=feed.map(x=>x.id)
    if(ids.length){
     const [{data:l},{data:cm}]=await Promise.all([
      supabase.from('social_likes').select('post_id,user_id').in('post_id',ids),
