@@ -12,8 +12,8 @@ export default function SocialPage(){
  const {t}=useI18n()
  const [ads,setAds]=useState([]),[shops,setShops]=useState([]),[posts,setPosts]=useState([]),[user,setUser]=useState(null),[draft,setDraft]=useState(''),[posting,setPosting]=useState(false),[loading,setLoading]=useState(true),[gate,setGate]=useState(false),[likes,setLikes]=useState([]),[comments,setComments]=useState([]),[commentPost,setCommentPost]=useState(null),[commentDraft,setCommentDraft]=useState(''),[commenting,setCommenting]=useState(false),[follows,setFollows]=useState([]),[media,setMedia]=useState([]),[uploadProgress,setUploadProgress]=useState(0),[editingPost,setEditingPost]=useState(null),[editDraft,setEditDraft]=useState(''),[editingComment,setEditingComment]=useState(null),[editCommentDraft,setEditCommentDraft]=useState(''),[feedMode,setFeedMode]=useState('all'),[peopleQuery,setPeopleQuery]=useState(''),[people,setPeople]=useState([]),[peopleSearching,setPeopleSearching]=useState(false),[friends,setFriends]=useState([]),[members,setMembers]=useState([]),[groups,setGroups]=useState([]),[groupName,setGroupName]=useState(''),[creatingGroup,setCreatingGroup]=useState(false),[friendRequests,setFriendRequests]=useState([]),[sentRequests,setSentRequests]=useState([])
  useEffect(()=>{supabase.auth.getUser().then(({data})=>{setUser(data?.user||null);load(data?.user||null)})},[])
- async function load(currentUser=user){
-  setLoading(true)
+ async function load(currentUser=user,showLoader=true){
+  if(showLoader)setLoading(true)
   const now=new Date().toISOString()
   const [{data:a},{data:b},{data:p}]=await Promise.all([
    supabase.from('market_tv_ads').select('id,boutique_id,title,description,media_type,media_url,created_at').eq('status','active').or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order('created_at',{ascending:false}).limit(30),
@@ -32,7 +32,7 @@ export default function SocialPage(){
   if(currentUser){const [{data:fw},{data:fr},{data:sr},{data:fl}]=await Promise.all([supabase.from('social_follows').select('following_id').eq('follower_id',currentUser.id),supabase.from('friend_requests').select('id,sender_id,created_at,profiles!friend_requests_sender_id_fkey(display_name,avatar_url,country_code)').eq('receiver_id',currentUser.id).eq('status','pending').order('created_at',{ascending:false}),supabase.from('friend_requests').select('id,receiver_id,status').eq('sender_id',currentUser.id).eq('status','pending'),supabase.from('friends').select('friend_id').eq('user_id',currentUser.id)]);setFollows(fw||[]);setFriendRequests(fr||[]);setSentRequests(sr||[]);const friendIds=(fl||[]).map(x=>x.friend_id);if(friendIds.length){const {data:fp}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').in('id',friendIds).limit(30);setFriends(fp||[])}else setFriends([])}else{setFollows([]);setFriends([]);setFriendRequests([]);setSentRequests([])}
   const {data:ms}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').order('created_at',{ascending:false}).limit(12);setMembers(ms||[])
   const {data:gs}=await supabase.from('social_groups').select('id,name,description,is_private,owner_id,created_at').order('created_at',{ascending:false}).limit(8);setGroups(gs||[])
-  setLoading(false)
+  if(showLoader)setLoading(false)
  }
 
  async function sendFriendRequest(userId){
@@ -165,8 +165,8 @@ export default function SocialPage(){
    setDraft('');setMedia([])
    setPosting(false);setUploadProgress(0)
    alert(t('socialPublishSuccess','Publication publiée avec succès'))
-   await load(user)
-   window.setTimeout(()=>load(user),700)
+   await load(user,false)
+   window.setTimeout(()=>load(user,false),700)
    return
   }else{console.error('WakhReek Social publish error',error);alert(t('socialPublishFailed','Publication unavailable')+(error?.message?' — '+error.message:''))}
   setPosting(false);setUploadProgress(0)
