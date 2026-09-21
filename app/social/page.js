@@ -144,7 +144,11 @@ export default function SocialPage(){
   }
   const {error}=await supabase.from('social_posts').insert({author_id:user.id,body:body||null,media_type,media_url})
   if(!error){setDraft('');setMedia(null);await load()}
-  else alert(t('socialPublishFailed','Publication unavailable'))
+  else{
+   console.error('WakhReek Social publish error',error)
+   const detail=[error.message,error.details,error.hint,error.code].filter(Boolean).join(' · ')
+   alert(t('socialPublishFailed','Publication unavailable')+(detail?'\n'+detail:''))
+  }
   setPosting(false)
  }
  const visiblePosts=feedMode==='following'&&user?posts.filter(p=>p.author_id===user.id||following(p.author_id)):posts
