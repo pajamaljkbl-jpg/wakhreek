@@ -10,25 +10,32 @@ import {supabase} from '../../lib/supabase'
 export default function SocialPage(){
  const router=useRouter()
  const {t}=useI18n()
- const [ads,setAds]=useState([]),[shops,setShops]=useState([]),[posts,setPosts]=useState([]),[user,setUser]=useState(null),[draft,setDraft]=useState(''),[posting,setPosting]=useState(false),[loading,setLoading]=useState(true),[gate,setGate]=useState(false),[likes,setLikes]=useState([]),[comments,setComments]=useState([]),[commentPost,setCommentPost]=useState(null),[commentDraft,setCommentDraft]=useState(''),[commenting,setCommenting]=useState(false),[follows,setFollows]=useState([]),[media,setMedia]=useState([]),[uploadProgress,setUploadProgress]=useState(0),[editingPost,setEditingPost]=useState(null),[editDraft,setEditDraft]=useState(''),[editingComment,setEditingComment]=useState(null),[editCommentDraft,setEditCommentDraft]=useState(''),[feedMode,setFeedMode]=useState('all'),[peopleQuery,setPeopleQuery]=useState(''),[people,setPeople]=useState([]),[peopleSearching,setPeopleSearching]=useState(false),[friends,setFriends]=useState([]),[members,setMembers]=useState([]),[groups,setGroups]=useState([]),[groupName,setGroupName]=useState(''),[creatingGroup,setCreatingGroup]=useState(false),[friendRequests,setFriendRequests]=useState([]),[sentRequests,setSentRequests]=useState([])
- useEffect(()=>{supabase.auth.getUser().then(({data})=>{setUser(data?.user||null);load(data?.user||null)})},[])
+ const [ads,setAds]=useState([]),[shops,setShops]=useState([]),[posts,setPosts]=useState([]),[loadingPosts,setLoadingPosts]=useState(true),[user,setUser]=useState(null),[draft,setDraft]=useState(''),[posting,setPosting]=useState(false),[loading,setLoading]=useState(true),[gate,setGate]=useState(false),[likes,setLikes]=useState([]),[comments,setComments]=useState([]),[commentPost,setCommentPost]=useState(null),[commentDraft,setCommentDraft]=useState(''),[commenting,setCommenting]=useState(false),[follows,setFollows]=useState([]),[media,setMedia]=useState([]),[uploadProgress,setUploadProgress]=useState(0),[editingPost,setEditingPost]=useState(null),[editDraft,setEditDraft]=useState(''),[editingComment,setEditingComment]=useState(null),[editCommentDraft,setEditCommentDraft]=useState(''),[feedMode,setFeedMode]=useState('all'),[peopleQuery,setPeopleQuery]=useState(''),[people,setPeople]=useState([]),[peopleSearching,setPeopleSearching]=useState(false),[friends,setFriends]=useState([]),[members,setMembers]=useState([]),[groups,setGroups]=useState([]),[groupName,setGroupName]=useState(''),[creatingGroup,setCreatingGroup]=useState(false),[friendRequests,setFriendRequests]=useState([]),[sentRequests,setSentRequests]=useState([])
+ useEffect(()=>{supabase.auth.getUser().then(({data})=>{setUser(data?.user||null);load(data?.user||null);loadPosts()})},[])
+ async function loadPosts(){
+  setLoadingPosts(true)
+  const {data,error}=await supabase.from('social_posts').select('id,author_id,body,media_type,media_url,boutique_id,created_at,media_items,profiles!social_posts_author_id_fkey(display_name,avatar_url)').order('created_at',{ascending:false}).limit(20)
+  if(!error){
+   setPosts(data||[])
+   const ids=(data||[]).map(x=>x.id)
+   if(ids.length){
+    const [{data:l},{data:cm}]=await Promise.all([
+     supabase.from('social_likes').select('post_id,user_id').in('post_id',ids),
+     supabase.from('social_comments').select('id,post_id,author_id,body,created_at,profiles!social_comments_author_id_fkey(display_name,avatar_url)').in('post_id',ids).order('created_at',{ascending:true})
+    ])
+    setLikes(l||[]);setComments(cm||[])
+   }else{setLikes([]);setComments([])}
+  }else console.error('WakhReek Social feed load error',error)
+  setLoadingPosts(false)
+ }
  async function load(currentUser=user,showLoader=true){
   if(showLoader)setLoading(true)
   const now=new Date().toISOString()
-  const [{data:a},{data:b},{data:p}]=await Promise.all([
+  const [{data:a},{data:b}]=await Promise.all([
    supabase.from('market_tv_ads').select('id,boutique_id,title,description,media_type,media_url,created_at').eq('status','active').or(`starts_at.is.null,starts_at.lte.${now}`).or(`ends_at.is.null,ends_at.gte.${now}`).order('created_at',{ascending:false}).limit(30),
-   supabase.from('boutiques').select('id,name,description,logo_url').eq('is_live',true).order('created_at',{ascending:false}).limit(12),
-   supabase.from('social_posts').select('id,author_id,body,media_type,media_url,boutique_id,created_at,media_items,profiles!social_posts_author_id_fkey(display_name,avatar_url)').order('created_at',{ascending:false}).limit(20)
+   supabase.from('boutiques').select('id,name,description,logo_url').eq('is_live',true).order('created_at',{ascending:false}).limit(12)
   ])
-  setAds(a||[]);setShops(b||[]);setPosts(p||[])
-  const ids=(p||[]).map(x=>x.id)
-  if(ids.length){
-   const [{data:l},{data:cm}]=await Promise.all([
-    supabase.from('social_likes').select('post_id,user_id').in('post_id',ids),
-    supabase.from('social_comments').select('id,post_id,author_id,body,created_at,profiles!social_comments_author_id_fkey(display_name,avatar_url)').in('post_id',ids).order('created_at',{ascending:true})
-   ])
-   setLikes(l||[]);setComments(cm||[])
-  }else{setLikes([]);setComments([])}
+  setAds(a||[]);setShops(b||[])
   if(currentUser){const [{data:fw},{data:fr},{data:sr},{data:fl}]=await Promise.all([supabase.from('social_follows').select('following_id').eq('follower_id',currentUser.id),supabase.from('friend_requests').select('id,sender_id,created_at,profiles!friend_requests_sender_id_fkey(display_name,avatar_url,country_code)').eq('receiver_id',currentUser.id).eq('status','pending').order('created_at',{ascending:false}),supabase.from('friend_requests').select('id,receiver_id,status').eq('sender_id',currentUser.id).eq('status','pending'),supabase.from('friends').select('friend_id').eq('user_id',currentUser.id)]);setFollows(fw||[]);setFriendRequests(fr||[]);setSentRequests(sr||[]);const friendIds=(fl||[]).map(x=>x.friend_id);if(friendIds.length){const {data:fp}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').in('id',friendIds).limit(30);setFriends(fp||[])}else setFriends([])}else{setFollows([]);setFriends([]);setFriendRequests([]);setSentRequests([])}
   const {data:ms}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').order('created_at',{ascending:false}).limit(12);setMembers(ms||[])
   const {data:gs}=await supabase.from('social_groups').select('id,name,description,is_private,owner_id,created_at').order('created_at',{ascending:false}).limit(8);setGroups(gs||[])
@@ -156,17 +163,10 @@ export default function SocialPage(){
   const first=uploaded[0]||null
   const {data:post,error}=await supabase.rpc('create_social_post',{p_body:body||null,p_media_type:first?.media_type||null,p_media_url:first?.media_url||null,p_group_id:null,p_media_items:uploaded})
   if(!error&&post){
-   setUploadProgress(100)
-   const created=Array.isArray(post)?post[0]:post
-   if(created){
-    const optimistic={...created,profiles:{display_name:user.user_metadata?.display_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'WakhReek',avatar_url:user.user_metadata?.avatar_url||null}}
-    setPosts(prev=>[optimistic,...prev.filter(p=>p.id!==optimistic.id)])
-   }
-   setDraft('');setMedia([])
+   setUploadProgress(100);setDraft('');setMedia([])
+   await loadPosts()
    setPosting(false);setUploadProgress(0)
    alert(t('socialPublishSuccess','Publication publiée avec succès'))
-   await load(user,false)
-   window.setTimeout(()=>load(user,false),700)
    return
   }else{console.error('WakhReek Social publish error',error);alert(t('socialPublishFailed','Publication unavailable')+(error?.message?' — '+error.message:''))}
   setPosting(false);setUploadProgress(0)
@@ -179,7 +179,7 @@ export default function SocialPage(){
   {(peopleSearching||people.length>0)&&<section className="peopleresults">{peopleSearching?<p>{t('loading','Loading…')}</p>:people.map(person=><div className="person" key={person.id}>{person.avatar_url?<img src={person.avatar_url} alt=""/>:<span className="personavatar">WR</span>}<Link href={'/social/profile/'+person.id} className="personinfo"><b data-user-content data-no-translate>{person.display_name||'WakhReek'}</b>{person.country_code&&<small>{person.country_code}</small>}</Link>{user&&person.id!==user.id&&<button type="button" className={following(person.id)?'following':''} onClick={()=>toggleFollow(person.id)}>{following(person.id)?t('socialFollowing','Following'):t('socialFollow','Follow')}</button>}</div>)}</section>}{user&&<section className="members"><h2>{t('socialMembers','Members')}</h2>{members.filter(person=>person.id!==user.id).length?members.filter(person=>person.id!==user.id).map(person=><div className="person" key={person.id}>{person.avatar_url?<img src={person.avatar_url} alt=""/>:<span className="personavatar">WR</span>}<Link href={'/social/profile/'+person.id} className="personinfo"><b data-user-content data-no-translate>{person.display_name||'WakhReek'}</b>{person.country_code&&<small>{person.country_code}</small>}</Link><button type="button" className={following(person.id)?'following':''} onClick={()=>toggleFollow(person.id)}>{following(person.id)?t('socialFollowing','Following'):t('socialFollow','Follow')}</button>{!friends.some(x=>x.id===person.id)&&<button type="button" disabled={sentRequests.some(x=>x.receiver_id===person.id)} onClick={()=>sendFriendRequest(person.id)}>{sentRequests.some(x=>x.receiver_id===person.id)?'✓': '🤝'}</button>}</div>):<p>{t('socialNoMembers','No members yet')}</p>}</section>}{user&&<section className="friends" id="friends"><h2>{t('socialFriends','Friends')}</h2>{friendRequests.length>0&&<div className="friendRequests"><b>{t('socialFriendRequests','Friend requests')} ({friendRequests.length})</b>{friendRequests.map(r=><div className="friendRequest" key={r.id}>{r.profiles?.avatar_url?<img src={r.profiles.avatar_url} alt=""/>:<span className="personavatar">WR</span>}<Link href={'/social/profile/'+r.sender_id}><span data-user-content data-no-translate>{r.profiles?.display_name||'WakhReek'}</span></Link><button onClick={()=>respondFriendRequest(r.id,true)}>✓</button><button className="reject" onClick={()=>respondFriendRequest(r.id,false)}>×</button></div>)}</div>}{friends.length?friends.map(friend=><Link href={'/social/profile/'+friend.id} className="friend" key={friend.id}>{friend.avatar_url?<img src={friend.avatar_url} alt=""/>:<span className="personavatar">WR</span>}<span><b data-user-content data-no-translate>{friend.display_name||'WakhReek'}</b>{friend.country_code&&<small>{friend.country_code}</small>}</span></Link>):<p>{t('socialNoFriends','No friends yet')}</p>}</section>}<section className="groups" id="groups"><h2>{t('socialGroups','Groups')}</h2>{user&&<div className="groupcreate"><input value={groupName} maxLength={100} onChange={e=>setGroupName(e.target.value)} placeholder={t('socialGroupName','Group name')}/><button disabled={groupName.trim().length<2||creatingGroup} onClick={createGroup}>＋</button></div>}{groups.length?groups.map(g=><Link href={'/social/groups/'+g.id} className="groupitem" key={g.id}><span>👥</span><b data-user-content data-no-translate>{g.name}</b></Link>):<p>{t('socialNoGroups','No groups yet')}</p>}</section><section className="events" id="events"><h2>📅 {t('socialEvents','Events')}</h2><p>{t('socialEventsSoon','Events coming soon')}</p></section></aside><section className="centercol">
   {user&&<section className="composer"><textarea value={draft} maxLength={3000} onChange={e=>setDraft(e.target.value)} placeholder={t('socialPlaceholder')} />{media.length>0&&<div className="mediaPreview">{media.map((file,i)=>{const url=URL.createObjectURL(file);return <div className="previewItem" key={file.name+i}>{file.type.startsWith('video/')?<video src={url} muted/>:<img src={url} alt=""/>}<button type="button" onClick={()=>setMedia(v=>v.filter((_,j)=>j!==i))}>×</button></div>})}</div>}{posting&&media.length>0&&<div className="uploadTrack"><span style={{width:uploadProgress+'%'}}></span></div>}<div className="composerActions"><label className="mediaBtn">＋ {t('socialAddMedia','Photo / Video')}<input type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={e=>setMedia(v=>[...v,...Array.from(e.target.files||[])].slice(0,10))} /></label><small className="charCount">{draft.length}/3000</small><button className="publishBtn" disabled={(!draft.trim()&&!media.length)||posting} onClick={publish}>{posting?t('socialPublishing'):t('socialPublish')}</button></div></section>}
   {user&&<div className="feedtabs"><button className={feedMode==='all'?'active':''} onClick={()=>setFeedMode('all')}>{t('socialFeedAll','Discover')}</button><button className={feedMode==='following'?'active':''} onClick={()=>setFeedMode('following')}>{t('socialFeedFollowing','Following')}</button></div>}
-  {loading?<div className="empty">{t('loading')}</div>:<>
+  {loadingPosts?<div className="empty">{t('loading')}</div>:<>
    {visiblePosts.length>0&&<section className="feed">{visiblePosts.map(post=><article className="post" id={'post-'+post.id} key={post.id}>
     <div className="posttop">{post.profiles?.avatar_url?<img className="useravatar" src={post.profiles.avatar_url} alt="" />:<div className="avatar">WR</div>}<div><div className="authorline"><Link className="authorlink" href={'/social/profile/'+post.author_id} data-user-content data-no-translate>{post.profiles?.display_name||'WakhReek'}</Link>{(!user||post.author_id!==user.id)&&<button className={following(post.author_id)?'following':''} onClick={()=>toggleFollow(post.author_id)}>{following(post.author_id)?t('socialFollowing','Following'):t('socialFollow','Follow')}</button>}</div><small>{new Date(post.created_at).toLocaleString()}</small></div></div>
     {editingPost===post.id?<div className="editbox"><textarea value={editDraft} maxLength={3000} onChange={e=>setEditDraft(e.target.value)} /><div><button onClick={()=>{setEditingPost(null);setEditDraft('')}}>{t('cancel','Cancel')}</button><button onClick={()=>saveEdit(post)}>{t('save','Save')}</button></div></div>:post.body&&<p className="socialbody" data-user-content data-no-translate>{post.body}</p>}{post.author_id===user?.id&&editingPost!==post.id&&<div className="owneractions"><button onClick={()=>startEdit(post)}>{t('socialEdit','Edit')}</button><button onClick={()=>deletePost(post)}>{t('socialDelete','Delete')}</button></div>}{(post.media_items?.length?post.media_items:[post.media_url?{media_type:post.media_type,media_url:post.media_url,sort_order:0}:null].filter(Boolean)).length>0&&<div className="postMediaGrid">{(post.media_items?.length?post.media_items:[{media_type:post.media_type,media_url:post.media_url,sort_order:0}]).sort((a,b)=>a.sort_order-b.sort_order).map((m,i)=>m.media_type==='video'?<video key={i} className="socialmedia" src={m.media_url} controls playsInline preload="metadata"/>:<img key={i} className="socialmedia" src={m.media_url} alt="" />)}</div>}
