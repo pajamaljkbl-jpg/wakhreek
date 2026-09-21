@@ -22,6 +22,7 @@ export default function SocialPage(){
   const [friends,setFriends]=useState([])
   const [requests,setRequests]=useState([])
   const [sentRequests,setSentRequests]=useState([])
+  const [boutiques,setBoutiques]=useState([])
 
   const loadPosts=useCallback(async()=>{
     setLoading(true)
@@ -76,8 +77,19 @@ export default function SocialPage(){
       if(active){setUser(data?.user||null);if(data?.user)loadPeopleAndFriends(data.user)}
     })
     loadPosts()
+    loadBoutiques()
     return()=>{active=false}
   },[loadPosts])
+
+  async function loadBoutiques(){
+    const {data}=await supabase
+      .from('boutiques')
+      .select('id,name,description,type,rating,logo_url')
+      .eq('is_live',true)
+      .order('rating',{ascending:false})
+      .limit(8)
+    setBoutiques(data||[])
+  }
 
   async function loadPeopleAndFriends(currentUser){
     const [{data:peopleRows},{data:friendRows},{data:requestRows},{data:sentRows}]=await Promise.all([
@@ -338,8 +350,18 @@ export default function SocialPage(){
         </section>
 
         <aside className="socialCleanRight">
-          <b>WakhReek Social</b>
-          <p>Le nouveau fil Social est en construction sur une base propre.</p>
+          <div className="boutiqueHead"><b>🛍️ Boutiques</b><Link href="/market">Voir tout</Link></div>
+          <p className="boutiqueIntro">Découvrez les boutiques WakhReek.</p>
+          <div className="boutiqueList">
+            {boutiques.map(boutique=><Link className="boutiqueCard" href={'/market/boutique/'+boutique.id} key={boutique.id}>
+              {boutique.logo_url?<img src={boutique.logo_url} alt=""/>:<span>WR</span>}
+              <div>
+                <strong>{boutique.name}</strong>
+                <small>{boutique.type||'Boutique'}{boutique.rating?(' · ★ '+boutique.rating):''}</small>
+              </div>
+            </Link>)}
+            {boutiques.length===0&&<small className="boutiqueEmpty">Aucune boutique disponible.</small>}
+          </div>
         </aside>
       </div>
 
@@ -353,7 +375,7 @@ export default function SocialPage(){
         .socialCleanLayout{display:grid;grid-template-columns:200px minmax(0,720px) 220px;justify-content:center;gap:16px;align-items:start}
         .socialCleanLeft,.socialCleanRight{position:sticky;top:96px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}
         .socialCleanLeft{display:grid;gap:5px}.socialCleanLeft>a,.socialCleanLeft>span{padding:11px;border-radius:10px;text-decoration:none;font-weight:700;color:#526174}.socialCleanLeft .active{background:#eef6ff;color:#087af0}.requestBadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#d92d20;color:#fff;font-size:11px}.socialFriendsPanel{border-top:1px solid #e7edf4;margin-top:7px;padding-top:8px;min-width:0}.socialFriendsPanel h3{font-size:13px;margin:10px 4px 6px;color:#667085}.socialFriendsPanel>small{display:block;padding:4px;color:#667085}.socialFriendLink,.socialPerson{display:flex;align-items:center;gap:7px;padding:6px 4px!important;text-decoration:none!important}.socialFriendLink img,.socialFriendLink i{width:30px;height:30px;border-radius:50%;object-fit:cover}.socialFriendLink i{display:grid;place-items:center;background:#087af0;color:#fff;font-size:9px;font-style:normal}.socialFriendLink span{min-width:0;padding:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.socialPerson>a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;font-size:12px}.socialPerson>span{display:flex;padding:0!important}.socialPerson button{border:0;border-radius:8px;background:#087af0;color:#fff;font-weight:900;padding:5px 8px}.socialPerson button:disabled{opacity:.45}
-        .socialCleanRight p{color:#667085;font-size:13px;line-height:1.5}
+        .socialCleanRight p{color:#667085;font-size:13px;line-height:1.5}.boutiqueHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.boutiqueHead>a{font-size:12px;color:#087af0;text-decoration:none;font-weight:800}.boutiqueIntro{margin:7px 0 10px}.boutiqueList{display:grid;gap:7px}.boutiqueCard{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #e7edf4;border-radius:12px;text-decoration:none;background:#fff;transition:.15s}.boutiqueCard:hover{border-color:#9dcbfb;background:#f7fbff}.boutiqueCard>img,.boutiqueCard>span{width:42px;height:42px;border-radius:10px;flex:0 0 42px}.boutiqueCard>img{object-fit:cover}.boutiqueCard>span{display:grid;place-items:center;background:#087af0;color:#fff;font-weight:900}.boutiqueCard>div{min-width:0;display:grid}.boutiqueCard strong{color:#172033;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.boutiqueCard small{color:#667085;font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.boutiqueEmpty{color:#667085;padding:8px 2px}
         .socialCleanCenter{min-width:0}.socialCleanComposer,.socialCleanPost,.socialFeedState,.socialFeedError{background:#fff;border:1px solid #dce5ef;border-radius:16px}
         .socialCleanComposer{padding:14px;margin-bottom:14px}.socialCleanComposer textarea{display:block;width:100%;min-height:105px;resize:vertical;border:0;outline:0;font:inherit;font-size:16px}
         .socialCleanComposer>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #edf1f5;padding-top:10px}.socialCleanComposer small{color:#667085}.socialMediaButton{display:inline-flex;align-items:center;border-radius:10px;background:#eef6ff;color:#087af0;font-weight:900;padding:9px 12px;cursor:pointer}.socialMediaButton input{display:none}.socialMediaSelection{display:grid!important;gap:6px!important;border-top:1px solid #edf1f5!important;padding:10px 0!important}.socialMediaSelection>div{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#f7f9fc;border-radius:9px;padding:7px 10px}.socialMediaSelection span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.socialMediaSelection button{padding:2px 8px!important;background:#fff!important;color:#b42318!important;border:1px solid #fecdca!important}.socialUploadTrack{height:6px!important;padding:0!important;border:0!important;background:#e6edf5;border-radius:999px;overflow:hidden;margin:7px 0}.socialUploadTrack span{display:block;height:100%;background:#087af0;transition:width .2s}.socialCleanComposer button,.socialFeedState button{border:0;border-radius:10px;background:#087af0;color:#fff;font-weight:900;padding:10px 18px}.socialCleanComposer button:disabled{opacity:.45}
