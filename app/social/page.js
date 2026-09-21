@@ -154,11 +154,11 @@ export default function SocialPage(){
    setUploadProgress(Math.round(((i+1)/media.length)*70))
   }
   const first=uploaded[0]||null
-  const {data:post,error}=await supabase.from('social_posts').insert({author_id:user.id,body:body||null,media_type:first?.media_type||null,media_url:first?.media_url||null}).select('id').single()
+  const {data:post,error}=await supabase.rpc('create_social_post',{p_body:body||null,p_media_type:first?.media_type||null,p_media_url:first?.media_url||null,p_group_id:null})
   if(!error&&post){
-   if(uploaded.length){const {error:mediaError}=await supabase.from('social_post_media').insert(uploaded.map(x=>({...x,post_id:post.id})));if(mediaError)console.error(mediaError)}
+   if(uploaded.length){const {error:mediaError}=await supabase.from('social_post_media').insert(uploaded.map(x=>({...x,post_id:post.id})));if(mediaError){console.error('WakhReek Social media link error',mediaError);alert(t('socialMediaLinkFailed','Publication created, but some media could not be attached'))}}
    setUploadProgress(100);setDraft('');setMedia([]);await load()
-  }else{console.error('WakhReek Social publish error',error);alert(t('socialPublishFailed','Publication unavailable'))}
+  }else{console.error('WakhReek Social publish error',error);alert(t('socialPublishFailed','Publication unavailable')+(error?.message?' — '+error.message:''))}
   setPosting(false);setUploadProgress(0)
  }
  const visiblePosts=feedMode==='following'&&user?posts.filter(p=>p.author_id===user.id||following(p.author_id)):posts
