@@ -35,8 +35,8 @@ export default function SocialPage(){
  return <AppShell><main className="social">
   <header className="head"><div><span className="brand">WakhReek Social</span><h1>{t('socialHero')}</h1><p>{t('socialTopics')}</p></div><button onClick={locked}>{t('socialJoin')}</button></header>
   <section className="welcome"><div><b>{t('socialWelcome')}</b><p>{t('socialPreview')}</p></div><button onClick={locked}>{t('socialMore')}</button></section>
-  {user&&<section className="composer"><textarea value={draft} maxLength={3000} onChange={e=>setDraft(e.target.value)} placeholder={t('socialPlaceholder')} /><div><small>{draft.length}/3000</small><button disabled={!draft.trim()||posting} onClick={publish}>{posting?'{t('socialPublishing')}':'{t('socialPublish')}'}</button></div></section>}
-  {loading?<div className="empty">Chargement…</div>:<>
+  {user&&<section className="composer"><textarea value={draft} maxLength={3000} onChange={e=>setDraft(e.target.value)} placeholder={t('socialPlaceholder')} /><div><small>{draft.length}/3000</small><button disabled={!draft.trim()||posting} onClick={publish}>{posting?t('socialPublishing'):t('socialPublish')}</button></div></section>}
+  {loading?<div className="empty">{t('loading')}</div>:<>
    {posts.length>0&&<section className="feed">{posts.map(post=><article className="post" key={post.id}>
     <div className="posttop">{post.profiles?.avatar_url?<img className="useravatar" src={post.profiles.avatar_url} alt="" />:<div className="avatar">WR</div>}<div><b data-user-content data-no-translate>{post.profiles?.display_name||'WakhReek'}</b><small>{new Date(post.created_at).toLocaleString()}</small></div></div>
     {post.body&&<p className="socialbody" data-user-content data-no-translate>{post.body}</p>}
