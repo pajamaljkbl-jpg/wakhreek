@@ -41,7 +41,7 @@ export default function AppShell({ children, title }) {
         <Link className={pathname === '/market' ? 'active' : ''} href="/market"><span className="tab-icon">🏪</span>{t('market')}</Link>
         <Link className={pathname === '/social' ? 'active' : ''} href="/social"><span className="tab-icon">👥</span>{t('social','Social')}</Link>
       </nav>
-      <div className="app-user"><span className="app-user-name" data-user-content>{name}</span><button onClick={signOut} data-no-translate>{t('signOut')}</button></div>
+      <div className="app-user"><Link className="app-profile-link" href={'/social/profile/'+session.user.id} title={t('socialMyProfile','My profile')}><span className="app-profile-avatar">{session.user.user_metadata?.avatar_url?<img src={session.user.user_metadata.avatar_url} alt="" />:'WR'}</span><span className="app-user-name" data-user-content>{name}</span></Link><button onClick={signOut} data-no-translate>{t('signOut')}</button></div>
     </header>
     <section className="app-page">
       {title && <div className="app-page-title"><h1>{title}</h1></div>}
