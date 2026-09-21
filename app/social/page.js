@@ -30,7 +30,7 @@ export default function SocialPage(){
    setLikes(l||[]);setComments(cm||[])
   }else{setLikes([]);setComments([])}
   if(currentUser){const {data:fw}=await supabase.from('social_follows').select('following_id').eq('follower_id',currentUser.id);setFollows(fw||[]);const friendIds=(fw||[]).map(x=>x.following_id);if(friendIds.length){const {data:fp}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').in('id',friendIds).limit(12);setFriends(fp||[])}else setFriends([])}else{setFollows([]);setFriends([])}
-  const {data:ms}=await supabase.from('profiles').select('id,display_name,avatar_url,country_code').order('created_at',{ascending:false}).limit(12);setMembers(ms||[])
+  const {data:ms}=await supabase.rpc('social_member_directory');setMembers((ms||[]).slice(0,12))
   const {data:gs}=await supabase.from('social_groups').select('id,name,description,is_private,owner_id,created_at').order('created_at',{ascending:false}).limit(8);setGroups(gs||[])
   setLoading(false)
  }
