@@ -68,6 +68,14 @@ export default function SocialPage(){
    if(!error)setLikes(v=>[...v,{post_id:postId,user_id:user.id}])
   }
  }
+ async function sharePost(post){
+  const url=window.location.origin+'/social#post-'+post.id
+  const shareData={title:'WakhReek Social',text:(post.body||'WakhReek Social').slice(0,180),url}
+  try{
+   if(navigator.share){await navigator.share(shareData)}
+   else{await navigator.clipboard.writeText(url);alert(t('socialLinkCopied','Link copied'))}
+  }catch(e){if(e?.name!=='AbortError')alert(t('socialShareFailed','Sharing unavailable'))}
+ }
  async function publish(){
   const body=draft.trim()
   if(!user){setGate(true);return}
@@ -83,10 +91,10 @@ export default function SocialPage(){
   <section className="welcome"><div><b>{t('socialWelcome')}</b><p>{t('socialPreview')}</p></div><button onClick={locked}>{t('socialMore')}</button></section>
   {user&&<section className="composer"><textarea value={draft} maxLength={3000} onChange={e=>setDraft(e.target.value)} placeholder={t('socialPlaceholder')} /><div><small>{draft.length}/3000</small><button disabled={!draft.trim()||posting} onClick={publish}>{posting?t('socialPublishing'):t('socialPublish')}</button></div></section>}
   {loading?<div className="empty">{t('loading')}</div>:<>
-   {posts.length>0&&<section className="feed">{posts.map(post=><article className="post" key={post.id}>
+   {posts.length>0&&<section className="feed">{posts.map(post=><article className="post" id={'post-'+post.id} key={post.id}>
     <div className="posttop">{post.profiles?.avatar_url?<img className="useravatar" src={post.profiles.avatar_url} alt="" />:<div className="avatar">WR</div>}<div><div className="authorline"><b data-user-content data-no-translate>{post.profiles?.display_name||'WakhReek'}</b>{(!user||post.author_id!==user.id)&&<button className={following(post.author_id)?'following':''} onClick={()=>toggleFollow(post.author_id)}>{following(post.author_id)?t('socialFollowing','Following'):t('socialFollow','Follow')}</button>}</div><small>{new Date(post.created_at).toLocaleString()}</small></div></div>
     {post.body&&<p className="socialbody" data-user-content data-no-translate>{post.body}</p>}
-    <div className="postactions"><button className={likedByMe(post.id)?'liked':''} onClick={()=>toggleLike(post.id)}>{likedByMe(post.id)?'♥':'♡'} {t('socialLike').replace(/^♡\s*/,'')} {likeCount(post.id)>0&&<span>{likeCount(post.id)}</span>}</button><button onClick={()=>openComments(post.id)}>{t('socialComment')} {postComments(post.id).length>0&&<span>{postComments(post.id).length}</span>}</button><button onClick={locked}>{t('socialShare')}</button></div>
+    <div className="postactions"><button className={likedByMe(post.id)?'liked':''} onClick={()=>toggleLike(post.id)}>{likedByMe(post.id)?'♥':'♡'} {t('socialLike').replace(/^♡\s*/,'')} {likeCount(post.id)>0&&<span>{likeCount(post.id)}</span>}</button><button onClick={()=>openComments(post.id)}>{t('socialComment')} {postComments(post.id).length>0&&<span>{postComments(post.id).length}</span>}</button><button onClick={()=>sharePost(post)}>{t('socialShare')}</button></div>
     {commentPost===post.id&&<div className="comments">{postComments(post.id).map(cm=><div className="comment" key={cm.id}><b data-user-content data-no-translate>{cm.profiles?.display_name||'WakhReek'}</b><p data-user-content data-no-translate>{cm.body}</p></div>)}<div className="commentbox"><textarea value={commentDraft} maxLength={2000} onChange={e=>setCommentDraft(e.target.value)} placeholder={t('socialCommentPlaceholder','Write a comment…')} /><button disabled={!commentDraft.trim()||commenting} onClick={()=>addComment(post.id)}>{commenting?t('socialPublishing'):t('socialCommentSend','Send')}</button></div></div>}
    </article>)}</section>}
    {ads.length>0&&<section className="feed sponsored">{ads.slice(0,5).map(ad=><article className="post" key={ad.id}>
