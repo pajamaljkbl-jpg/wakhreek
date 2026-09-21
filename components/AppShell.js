@@ -31,14 +31,18 @@ export default function AppShell({ children, title }) {
 
   return <main className="app-root">
     <header className="app-topbar">
-      <div className="app-brand"><span className="app-logo"><img src="/wakhreek-logo.png" alt="WakhReek" /></span><strong>WakhReek -Onley Took</strong></div>
-      <div className="app-user"><span data-user-content>{name}</span><button onClick={signOut} data-no-translate>{t('signOut')}</button></div>
+      <div className="app-brand">
+        <span className="app-logo"><img src="/wakhreek-logo.png" alt="WakhReek" /></span>
+        <strong>WakhReek</strong>
+        <span className="app-search" aria-hidden="true">⌕ <span>Rechercher sur WakhReek...</span></span>
+      </div>
+      <nav className="app-tabs" aria-label={t('mainNavigation')} data-no-translate>
+        <Link className={pathname === '/communication' ? 'active' : ''} href="/communication"><span className="tab-icon">💬</span>{t('communication')}</Link>
+        <Link className={pathname === '/market' ? 'active' : ''} href="/market"><span className="tab-icon">🏪</span>{t('market')}</Link>
+        <Link className={pathname === '/social' ? 'active' : ''} href="/social"><span className="tab-icon">👥</span>{t('social','Social')}</Link>
+      </nav>
+      <div className="app-user"><span className="app-user-name" data-user-content>{name}</span><button onClick={signOut} data-no-translate>{t('signOut')}</button></div>
     </header>
-    <nav className="app-tabs" aria-label={t('mainNavigation')} data-no-translate>
-      <Link className={pathname === '/communication' ? 'active' : ''} href="/communication">{t('communication')}</Link>
-      <Link className={pathname === '/market' ? 'active' : ''} href="/market">{t('market')}</Link>
-      <Link className={pathname === '/social' ? 'active' : ''} href="/social">{t('social','Social')}</Link>
-    </nav>
     <section className="app-page">
       {title && <div className="app-page-title"><h1>{title}</h1></div>}
       {children}
