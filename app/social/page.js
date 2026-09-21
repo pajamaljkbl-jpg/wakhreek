@@ -156,7 +156,18 @@ export default function SocialPage(){
   const first=uploaded[0]||null
   const {data:post,error}=await supabase.rpc('create_social_post',{p_body:body||null,p_media_type:first?.media_type||null,p_media_url:first?.media_url||null,p_group_id:null,p_media_items:uploaded})
   if(!error&&post){
-   setUploadProgress(100);setDraft('');setMedia([]);await load()
+   setUploadProgress(100)
+   const created=Array.isArray(post)?post[0]:post
+   if(created){
+    const optimistic={...created,profiles:{display_name:user.user_metadata?.display_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'WakhReek',avatar_url:user.user_metadata?.avatar_url||null}}
+    setPosts(prev=>[optimistic,...prev.filter(p=>p.id!==optimistic.id)])
+   }
+   setDraft('');setMedia([])
+   setPosting(false);setUploadProgress(0)
+   alert(t('socialPublishSuccess','Publication publiée avec succès'))
+   await load(user)
+   window.setTimeout(()=>load(user),700)
+   return
   }else{console.error('WakhReek Social publish error',error);alert(t('socialPublishFailed','Publication unavailable')+(error?.message?' — '+error.message:''))}
   setPosting(false);setUploadProgress(0)
  }
