@@ -142,7 +142,7 @@ export default function SocialPage(){
    if(uploadError){alert(t('socialMediaUploadFailed','Upload failed'));setPosting(false);return}
    media_url=supabase.storage.from('social-media').getPublicUrl(path).data.publicUrl
   }
-  const {error}=await supabase.from('social_posts').insert({author_id:user.id,body:body||null,media_type,media_url})
+  const {error}=await supabase.rpc('create_social_post',{p_body:body||null,p_media_type:media_type,p_media_url:media_url,p_group_id:null})
   if(!error){setDraft('');setMedia(null);await load()}
   else{
    console.error('WakhReek Social publish error',error)
