@@ -33,8 +33,8 @@ export default function CommunicationTvBand(){
   if(!active)return null
   const shop=shops[index]||null
 
-  return <aside className="tvBand" aria-label="WakhReek TV boutiques">
-    <button className="tvLabel" onClick={()=>router.push('/tv')}><b>▶ WakhReek TV</b><span>Découvrir</span></button>
+  return <aside className="tvBand" aria-label="WakhReek Social boutiques">
+    <button className="tvLabel" onClick={()=>router.push('/tv')}><b>▶ WakhReek Social</b><span>Découvrir</span></button>
     <div className="track">
       {shop?<button className="shop" onClick={()=>router.push(`/market/boutique/${shop.id}`)}>
         {shop.logo_url?<img src={shop.logo_url} alt={shop.name}/>:<span className="logo">wR</span>}
