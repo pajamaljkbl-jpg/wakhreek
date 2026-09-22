@@ -361,7 +361,7 @@ export default function SocialPage(){
         </section>
         <aside className="socialCleanRight">
           <div className="socialMarketShops">
-            {boutiques.map(boutique=><article key={boutique.id} onClick={()=>location.href={'/market/boutique/'+boutique.id}>
+            {boutiques.map(boutique=><article key={boutique.id} onClick={()=>{window.location.href='/market/boutique/'+boutique.id}}>
               <div className="socialMarketLogo">{boutique.logo_url?<img src={boutique.logo_url} alt={boutique.name}/>:'🏪'}</div>
               <div>
                 <h3>{boutique.name}</h3>
