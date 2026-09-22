@@ -1,7 +1,6 @@
 import './globals.css'
 import './payment-qr.css'
 import PushRegistrar from './PushRegistrar'
-import CommunicationTvBand from '../components/CommunicationTvBand'
 import OutgoingCallTone from '../components/OutgoingCallTone'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import I18nProvider from '../components/I18nProvider'
@@ -30,7 +29,6 @@ export default function RootLayout({ children }) {
           <AdminShortcut />
           <NewUserAssistant />
           <BoutiqueOwnerAssistant />
-          <CommunicationTvBand />
           <OutgoingCallTone />
           <LanguageSwitcher />
         </I18nProvider>
