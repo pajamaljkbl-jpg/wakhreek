@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../lib/supabase'
-import { useI18n } from '../components/I18nProvider'
-import { authTranslate } from '../lib/i18n-auth'
+import { supabase } from '../../lib/supabase'
+import { useI18n } from '../../components/I18nProvider'
+import { authTranslate } from '../../lib/i18n-auth'
 
 export default function Home() {
   const router = useRouter()
