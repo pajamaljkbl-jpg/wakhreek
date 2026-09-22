@@ -359,7 +359,20 @@ export default function SocialPage(){
               })}
             </section>}
         </section>
-        <aside className="socialCleanRight"></aside>
+        <aside className="socialCleanRight">
+          <div className="socialMarketShops">
+            {boutiques.map(boutique=><article key={boutique.id} onClick={()=>location.href={'/market/boutique/'+boutique.id}>
+              <div className="socialMarketLogo">{boutique.logo_url?<img src={boutique.logo_url} alt={boutique.name}/>:'🏪'}</div>
+              <div>
+                <h3>{boutique.name}</h3>
+                <small>{boutique.type==='physique'?'Boutique physique':boutique.type==='en_ligne'?'Boutique en ligne':boutique.type==='les_deux'?'Physique + en ligne':'Boutique'}</small>
+                <p>📍 {boutiqueCountries[boutique.country_id]||''}{boutiqueCities[boutique.city_id]?(' · '+boutiqueCities[boutique.city_id]):''}</p>
+                <p>⭐ {Number(boutique.rating||0).toFixed(1)} · {boutique.plan==='company_unlimited'?'Entreprise':boutique.plan==='pro_45'?'45 Produits':'15 Produits'}</p>
+                <button type="button">Entrer dans la boutique →</button>
+              </div>
+            </article>)}
+          </div>
+        </aside>
       </div>
 
       <style jsx>{`
@@ -370,7 +383,7 @@ export default function SocialPage(){
         .socialSectionNav{display:flex;justify-content:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:7px;margin-bottom:14px}
         .socialSectionNav a,.socialSectionNav span{padding:9px 15px;border-radius:10px;text-decoration:none;font-weight:800;color:#526174}.socialSectionNav a{background:#eef6ff;color:#087af0}
         .socialCleanLayout{display:grid;grid-template-columns:200px minmax(0,720px) 300px;justify-content:center;gap:16px;align-items:start}
-        .socialCleanLeft{position:sticky;top:96px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.socialCleanRight{min-height:1px}
+        .socialCleanLeft{position:sticky;top:96px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px}.socialCleanRight{min-height:1px;position:sticky;top:96px}.socialMarketShops{display:grid;grid-template-columns:1fr;gap:12px}.socialMarketShops article{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;display:flex;gap:10px;cursor:pointer}.socialMarketLogo{width:54px;height:54px;flex:0 0 54px;border-radius:50%;background:#eff5ea;display:grid;place-items:center;overflow:hidden}.socialMarketLogo img{width:100%;height:100%;object-fit:cover}.socialMarketShops article>div:last-child{min-width:0}.socialMarketShops h3{margin:0 0 4px;font-size:16px;color:#172033;overflow-wrap:anywhere}.socialMarketShops small,.socialMarketShops p{color:#667085;font-size:11px}.socialMarketShops p{margin:7px 0}.socialMarketShops button{border:0;border-radius:8px;padding:7px 9px;background:#0875e8;color:#fff;font-weight:800;cursor:pointer;font-size:11px;max-width:100%}
         .socialCleanLeft{display:grid;gap:5px}.socialCleanLeft>a,.socialCleanLeft>span{padding:11px;border-radius:10px;text-decoration:none;font-weight:700;color:#526174}.socialCleanLeft .active{background:#eef6ff;color:#087af0}.requestBadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#d92d20;color:#fff;font-size:11px}.socialFriendsPanel{border-top:1px solid #e7edf4;margin-top:7px;padding-top:8px;min-width:0}.socialFriendsPanel h3{font-size:13px;margin:10px 4px 6px;color:#667085}.socialFriendsPanel>small{display:block;padding:4px;color:#667085}.socialFriendLink,.socialPerson{display:flex;align-items:center;gap:7px;padding:6px 4px!important;text-decoration:none!important}.socialFriendLink img,.socialFriendLink i{width:30px;height:30px;border-radius:50%;object-fit:cover}.socialFriendLink i{display:grid;place-items:center;background:#087af0;color:#fff;font-size:9px;font-style:normal}.socialFriendLink span{min-width:0;padding:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.socialPerson>a{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none;font-size:12px}.socialPerson>span{display:flex;padding:0!important}.socialPerson button{border:0;border-radius:8px;background:#087af0;color:#fff;font-weight:900;padding:5px 8px}.socialPerson button:disabled{opacity:.45}
         .socialCleanCenter{min-width:0}.socialCleanComposer,.socialCleanPost,.socialFeedState,.socialFeedError{background:#fff;border:1px solid #dce5ef;border-radius:16px}
         .socialCleanComposer{padding:14px;margin-bottom:14px}.socialCleanComposer textarea{display:block;width:100%;min-height:105px;resize:vertical;border:0;outline:0;font:inherit;font-size:16px}
