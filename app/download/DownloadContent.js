@@ -26,7 +26,7 @@ export default function DownloadContent(){
    ['Screenshot_20260923-221209.png','Services'],
    ['Screenshot_20260923-221227.png','Boutiques'],
    ['Screenshot_20260923-221259.png','WakhReek Social']
-  ].map(([src,alt])=><article key={src} className={styles.showcaseCard}><img src={'/'+encodeURIComponent(src)} alt={alt}/></article>)}</div><div className={styles.journeyText}><h3>{c.journeyTitle}</h3><p>{c.journeyText}</p></div><div className={styles.securityNote}><strong>{c.security}</strong><p>{c.securityText}</p></div></section>
+  ].map(([src,alt],i)=><article key={src} className={styles.showcaseCard}><img src={'/'+encodeURIComponent(src)} alt={alt}/>{i===6&&<div className={styles.journeyText}><h3>{c.journeyTitle}</h3><p>{c.journeyText}</p></div>}</article>)}</div><div className={styles.securityNote}><strong>{c.security}</strong><p>{c.securityText}</p></div></section>
   <section className={styles.videoSection}><div className={styles.socialPreview}><span className={styles.badge}>{c.socialBadge}</span><h2>{c.socialTitle}</h2><p>{c.socialText}</p><Link className={styles.primary} href="/">{c.socialCta}</Link></div><div><div className={styles.videoPlaceholder}><video controls playsInline preload="metadata" src="/Ma%20vid%C3%A9o-80.mp4" /></div><div className={styles.videoCaption}><h3>{c.install80}</h3><p>{c.install80Text}</p></div></div></section>
   <footer className={styles.footer}><img src="/wakhreek-192-v2.png" alt=""/><div><strong>WakhReek</strong><span>{c.app}</span></div><Link href="/">{c.back}</Link></footer>
  </main>
