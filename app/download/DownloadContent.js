@@ -18,7 +18,15 @@ export default function DownloadContent(){
  return <main className={styles.page}>
   <header className={styles.header}><Link href="/" className={styles.brand} aria-label="WakhReek"><img src="/wakhreek-192-v2.png" alt="WakhReek"/><span>WakhReek</span></Link><nav><Link href="/communication">{c.open}</Link></nav></header>
   <section className={styles.hero}><div className={styles.heroText}><span className={styles.badge}>{c.badge}</span><h1>{c.title}</h1><p className={styles.lead}>{c.lead}</p><div className={styles.actions}>{SHOW_APK_DOWNLOAD && (releaseReady?<a className={styles.primary} href={APK_URL} download>{c.download}</a>:<span className={`${styles.primary} ${styles.disabled}`} aria-disabled="true">{c.soon}</span>)}<Link className={styles.secondary} href="/inscription">{c.web}</Link></div><div className={styles.releaseInfo}><span>✓ {c.version}</span><span>✓ {c.android}</span><span>✓ {c.official}</span></div></div><div className={styles.phoneCard}><div className={styles.phoneTop}></div><img src="/wakhreek-512-v2.png" alt="WakhReek"/><h2>WakhReek</h2><p>Boutiques • Messagerie • Communauté</p><div className={styles.features}>{c.features.map(x=><span key={x}>{x}</span>)}</div></div></section>
-  <section className={styles.install}><div className={styles.sectionTitle}><span>{c.install}</span><h2>{c.how}</h2><p>{c.simple}</p></div><div className={styles.steps}>{c.steps.map((s,i)=><article key={s[0]}><b>{i+1}</b><h3>{s[0]}</h3><p>{s[1]}</p></article>)}</div><div className={styles.securityNote}><strong>{c.security}</strong><p>{c.securityText}</p></div></section>
+  <section className={styles.install}><div className={styles.sectionTitle}><span>{c.install}</span><h2>{c.how}</h2><p>{c.simple}</p></div><div className={styles.showcaseGrid}>{[
+   ['Screenshot 2026-09-22 at 15-05-49 WakhReek.png','Inscription'],
+   ['Screenshot_20260923-221113.png','Communication'],
+   ['Screenshot_20260923-221129.png','Marché'],
+   ['Screenshot_20260923-221143.png','WakhReek Social'],
+   ['Screenshot_20260923-221209.png','Services'],
+   ['Screenshot_20260923-221227.png','Boutiques'],
+   ['Screenshot_20260923-221259.png','WakhReek Social']
+  ].map(([src,alt])=><article key={src} className={styles.showcaseCard}><img src={'/'+encodeURIComponent(src)} alt={alt}/></article>)}</div><div className={styles.securityNote}><strong>{c.security}</strong><p>{c.securityText}</p></div></section>
   <section className={styles.videoSection}><div className={styles.socialPreview}><span className={styles.badge}>{c.socialBadge}</span><h2>{c.socialTitle}</h2><p>{c.socialText}</p><Link className={styles.primary} href="/">{c.socialCta}</Link></div><div><div className={styles.videoPlaceholder}><video controls playsInline preload="metadata" src="/Ma%20vid%C3%A9o-80.mp4" /></div><div className={styles.videoCaption}><h3>{c.install80}</h3><p>{c.install80Text}</p></div></div></section>
   <footer className={styles.footer}><img src="/wakhreek-192-v2.png" alt=""/><div><strong>WakhReek</strong><span>{c.app}</span></div><Link href="/">{c.back}</Link></footer>
  </main>
