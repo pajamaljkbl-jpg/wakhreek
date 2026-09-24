@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { useI18n } from '../../components/I18nProvider'
 import { authTranslate } from '../../lib/i18n-auth'
 
 export default function Home() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedNext = searchParams.get('next') || ''
+  const nextPath = requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/communication'
   const { language, t } = useI18n()
   const tr = (key, fallback) => authTranslate(language, key, fallback)
   const [mode, setMode] = useState('signup')
@@ -19,10 +22,10 @@ export default function Home() {
 
   useEffect(() => {
     supabase.from('countries').select('code,name_fr,name_ar,flag_emoji').order('name_fr').then(({data})=>setCountries(data||[]))
-    supabase.auth.getSession().then(({ data }) => { if (data.session) router.replace('/communication'); else setLoading(false) })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace('/communication') })
+    supabase.auth.getSession().then(({ data }) => { if (data.session) router.replace(nextPath); else setLoading(false) })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace(nextPath) })
     return () => listener.subscription.unsubscribe()
-  }, [router])
+  }, [router, nextPath])
 
   function change(e) { setForm((old) => ({ ...old, [e.target.name]: e.target.value })) }
 
@@ -35,7 +38,7 @@ export default function Home() {
     if (identityError) return setMessage(tr('checkFailed', 'Impossible de vérifier les informations. Réessayez.'))
     if (identity?.[0]?.phone_taken) return setMessage(tr('phoneTaken', 'Ce numéro de téléphone est déjà utilisé par un autre compte.'))
     setMessage(tr('creating', 'Création du compte...'))
-    const { error } = await supabase.auth.signUp({ email, password: form.password, options: { emailRedirectTo: `${window.location.origin}/communication`, data: { display_name: displayName, phone, country_code:form.countryCode } } })
+    const { error } = await supabase.auth.signUp({ email, password: form.password, options: { emailRedirectTo: `${window.location.origin}${nextPath}`, data: { display_name: displayName, phone, country_code:form.countryCode } } })
     setMessage(error ? error.message : tr('created', 'Compte créé. Vérifiez votre e-mail pour confirmer votre inscription.'))
   }
 
@@ -43,7 +46,7 @@ export default function Home() {
     e.preventDefault(); setMessage(tr('connecting', 'Connexion...'))
     const { error } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password })
     if (error) return setMessage(error.message)
-    router.replace('/communication')
+    router.replace(nextPath)
   }
 
   if (loading) return <main className="wr-landing"><section className="wr-auth-card wr-loading">{t('loading', 'Chargement...')}</section></main>
