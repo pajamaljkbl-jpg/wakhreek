@@ -17,7 +17,7 @@ export default function AppShell({ children, title }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
-        if (!publicMarket) { router.replace('/'); return }
+        if (!publicMarket) { router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`); return }
         setSession(null); setLoading(false); return
       }
       setSession(data.session); setLoading(false)
@@ -25,7 +25,7 @@ export default function AppShell({ children, title }) {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!nextSession) {
         setSession(null)
-        if (!publicMarket) router.replace('/')
+        if (!publicMarket) router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
       } else setSession(nextSession)
     })
     return () => listener.subscription.unsubscribe()
