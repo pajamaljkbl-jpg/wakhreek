@@ -1,16 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { useI18n } from '../../components/I18nProvider'
 import { authTranslate } from '../../lib/i18n-auth'
 
 export default function Home() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const requestedNext = searchParams.get('next') || ''
-  const nextPath = requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/communication'
+  const [nextPath, setNextPath] = useState('/communication')
   const { language, t } = useI18n()
   const tr = (key, fallback) => authTranslate(language, key, fallback)
   const [mode, setMode] = useState('signup')
@@ -21,11 +19,14 @@ export default function Home() {
   const [form, setForm] = useState({ displayName: '', phone: '', countryCode:'SEN', email: '', password: '' })
 
   useEffect(() => {
+    const requestedNext = new URLSearchParams(window.location.search).get('next') || ''
+    const safeNext = requestedNext.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/communication'
+    setNextPath(safeNext)
     supabase.from('countries').select('code,name_fr,name_ar,flag_emoji').order('name_fr').then(({data})=>setCountries(data||[]))
-    supabase.auth.getSession().then(({ data }) => { if (data.session) router.replace(nextPath); else setLoading(false) })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace(nextPath) })
+    supabase.auth.getSession().then(({ data }) => { if (data.session) router.replace(safeNext); else setLoading(false) })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace(safeNext) })
     return () => listener.subscription.unsubscribe()
-  }, [router, nextPath])
+  }, [router])
 
   function change(e) { setForm((old) => ({ ...old, [e.target.name]: e.target.value })) }
 
