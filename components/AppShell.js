@@ -43,9 +43,9 @@ export default function AppShell({ children, title }) {
         <span className="app-search" aria-hidden="true">⌕ <span>Rechercher sur WakhReek...</span></span>
       </div>
       <nav className="app-tabs" aria-label={t('mainNavigation')} data-no-translate>
-        <Link className={pathname === '/communication' ? 'active' : ''} href="/communication"><span className="tab-icon">💬</span>{t('communication')}</Link>
+        <Link className={pathname === '/communication' ? 'active' : ''} href={session?"/communication":"/inscription"}><span className="tab-icon">💬</span>{t('communication')}</Link>
         <Link className={pathname === '/market' ? 'active' : ''} href="/market"><span className="tab-icon">🏪</span>{t('market')}</Link>
-        <Link className={pathname === '/social' ? 'active' : ''} href="/social"><span className="tab-icon">👥</span>WakhReek Social</Link>
+        <Link className={pathname === '/social' ? 'active' : ''} href={session?"/social":"/inscription"}><span className="tab-icon">👥</span>WakhReek Social</Link>
       </nav>
       <div className="app-user">{session?<><Link className="app-profile-link" href={'/social/profile/'+session.user.id} title={t('socialMyProfile','My profile')}><span className="app-profile-avatar">{session.user.user_metadata?.avatar_url?<img src={session.user.user_metadata.avatar_url} alt="" />:'WR'}</span><span className="app-user-name" data-user-content>{name}</span></Link><button onClick={signOut} data-no-translate>{t('signOut')}</button></>:<Link className="app-profile-link" href="/inscription">{t('signUp','S’inscrire')}</Link>}</div>
     </header>
