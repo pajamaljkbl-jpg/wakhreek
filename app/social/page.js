@@ -201,8 +201,14 @@ export default function SocialPage(){
     return !!user&&likes.some(item=>item.post_id===postId&&item.user_id===user.id)
   }
 
+  function requireAccount(next='/social'){
+    if(user)return false
+    window.location.href=`/inscription?next=${encodeURIComponent(next)}`
+    return true
+  }
+
   async function toggleLike(postId){
-    if(!user)return
+    if(requireAccount(`/social#post-${postId}`))return
     if(liked(postId)){
       const {error:likeError}=await supabase.from('social_likes').delete().eq('post_id',postId).eq('user_id',user.id)
       if(!likeError)setLikes(current=>current.filter(item=>!(item.post_id===postId&&item.user_id===user.id)))
@@ -341,8 +347,8 @@ export default function SocialPage(){
                   </div>}
                   <div className="socialPostActions">
                     <button type="button" className={liked(post.id)?'liked':''} onClick={()=>toggleLike(post.id)}>♥ J’aime <span>{likes.filter(item=>item.post_id===post.id).length||''}</span></button>
-                    <button type="button" onClick={()=>{setOpenComments(openComments===post.id?null:post.id);setCommentDraft('')}}>💬 Commenter <span>{comments.filter(item=>item.post_id===post.id).length||''}</span></button>
-                    <button type="button" onClick={()=>sharePost(post)}>↗ Partager</button>
+                    <button type="button" onClick={()=>{if(requireAccount(`/social#post-${post.id}`))return;setOpenComments(openComments===post.id?null:post.id);setCommentDraft('')}}>💬 Commenter <span>{comments.filter(item=>item.post_id===post.id).length||''}</span></button>
+                    <button type="button" onClick={()=>{if(requireAccount(`/social#post-${post.id}`))return;sharePost(post)}}>↗ Partager</button>
                   </div>
                   {openComments===post.id&&<div className="socialComments">
                     {comments.filter(item=>item.post_id===post.id).map(comment=><div className="socialComment" key={comment.id}>
