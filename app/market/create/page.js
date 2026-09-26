@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '../../../components/AppShell'
 import { supabase } from '../../../lib/supabase'
+import { trackWakhReekEvent } from '../../../components/AnalyticsTracker'
 
 const TERMS_VERSION = '2026-09-14-v1'
 
@@ -17,7 +18,7 @@ export default function CreateBoutiquePage() {
   const [legalName,setLegalName]=useState(''), [documentType,setDocumentType]=useState('id_card'), [documentNumber,setDocumentNumber]=useState(''), [legalDocument,setLegalDocument]=useState(null), [termsAccepted,setTermsAccepted]=useState(false)
   const [saving,setSaving]=useState(false), [message,setMessage]=useState(''), [isOwner,setIsOwner]=useState(false)
 
-  useEffect(()=>{(async()=>{ const {data:{user}}=await supabase.auth.getUser(); setIsOwner(user?.app_metadata?.role==='admin');
+  useEffect(()=>{trackWakhReekEvent('boutique_application_start',{path:'/market/create'});(async()=>{ const {data:{user}}=await supabase.auth.getUser(); setIsOwner(user?.app_metadata?.role==='admin');
     const [{data:c},{data:v},{data:p},{data:pc},{data:fx},{data:pm},{data:cpm}]=await Promise.all([
       supabase.from('countries').select('id,code,name_fr,flag_emoji,market_region').order('name_fr'),
       supabase.from('cities').select('id,country_id,name').order('name'),
@@ -69,6 +70,7 @@ export default function CreateBoutiquePage() {
     const {error:subscriptionError}=await supabase.from('subscriptions').insert({boutique_id:boutique.id,plan:selectedPlan.code,country_code:selectedCountry.code,amount_cfa:monthlyPrice,reference_amount_cfa:monthlyPrice,billing_currency:selectedPricing?billingCurrency:null,billing_amount:selectedPricing?billingAmount:null,exchange_rate:selectedPricing&&billingCurrency==='USD'?usdXofRate:null,exchange_rate_at:selectedPricing&&billingCurrency==='USD'?usdXofRateAt:null,status:'pending',feature_mode:isCompany?'ai':featureMode,has_ads:hasAds,has_ai_agent:hasAi,payment_method:selectedPaymentMethod?.code||null,payment_type:selectedPaymentMethod?.payment_type||null,payment_selected_at:selectedPaymentMethod?acceptedAt:null})
     setSaving(false)
     if(subscriptionError)return setMessage(`Demande légale enregistrée, mais l’abonnement n’a pas pu être enregistré: ${subscriptionError.message}`)
+    trackWakhReekEvent('boutique_application_submit',{boutique_id:boutique.id,country_code:selectedCountry.code,plan:selectedPlan.code,feature_mode:isCompany?'ai':featureMode})
     setMessage('Demande enregistrée. Votre boutique reste inactive pendant la vérification des documents, du contrat et, si applicable, du paiement. WakhReek vous informera après validation.')
   }
 
