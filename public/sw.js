@@ -1,8 +1,8 @@
-const CACHE_NAME = 'wakhreek-v11-market-stable';
+const CACHE_NAME = 'wakhreek-v12-communication-offline';
 
 // Only cache a public offline fallback and its logo. Never cache authenticated pages,
 // private messages, API responses, or Next.js application assets.
-const OFFLINE_ASSETS = ['/offline.html', '/offline-market.html', '/wakhreek-192-v2.png'];
+const OFFLINE_ASSETS = ['/offline.html', '/offline-market.html', '/offline-communication.html', '/wakhreek-192-v2.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
@@ -33,7 +33,8 @@ self.addEventListener('fetch', (event) => {
     try { return await fetch(event.request); }
     catch (_) {
       const cache = await caches.open(CACHE_NAME);
-      return (await cache.match(url.pathname === '/' || url.pathname === '/market' || url.pathname.startsWith('/market/') ? '/offline-market.html' : '/offline.html')) || Response.error();
+      const fallback = url.pathname === '/communication' || url.pathname.startsWith('/communication/') ? '/offline-communication.html' : (url.pathname === '/' || url.pathname === '/market' || url.pathname.startsWith('/market/') ? '/offline-market.html' : '/offline.html');
+      return (await cache.match(fallback)) || Response.error();
     }
   })());
 });
