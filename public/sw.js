@@ -1,10 +1,14 @@
-const CACHE_NAME = 'wakhreek-v8-pwa-safe';
+const CACHE_NAME = 'wakhreek-v9-offline-shell';
 
-// Keep the service worker minimal while validating Android installed-app launch.
-// Push/call notifications remain enabled. Page navigation and Next.js assets
-// are left to the normal browser/network path for this diagnostic step.
+// Only cache a public offline fallback and its logo. Never cache authenticated pages,
+// private messages, API responses, or Next.js application assets.
+const OFFLINE_ASSETS = ['/offline.html', '/wakhreek-192-v2.png'];
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(OFFLINE_ASSETS);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -16,6 +20,21 @@ self.addEventListener('activate', (event) => {
         .map((key) => caches.delete(key))
     );
     await clients.claim();
+  })());
+});
+
+// Network-first navigation: offline fallback only when the network is unavailable.
+// Do not cache pages that may contain user-specific information.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate' || event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+  event.respondWith((async () => {
+    try { return await fetch(event.request); }
+    catch (_) {
+      const cache = await caches.open(CACHE_NAME);
+      return (await cache.match('/offline.html')) || Response.error();
+    }
   })());
 });
 
