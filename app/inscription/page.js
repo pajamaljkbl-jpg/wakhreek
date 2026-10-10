@@ -37,10 +37,8 @@ export default function Home() {
     setMessage(tr('creating', 'Création du compte...'))
     const { error } = await supabase.auth.signUp({ email, password: form.password, options: { emailRedirectTo: `${window.location.origin}${nextPath}`, data: { display_name: displayName, phone, country_code:form.countryCode } } })
     if (error) {
-      const details = String(error.message || '')
-      const phoneConflict = /profiles_phone_unique_ci|duplicate key.*phone|phone.*already exists/i.test(details)
-      if (phoneConflict) return setMessage(tr('phoneTaken', 'Ce numéro de téléphone ne peut pas être utilisé pour créer ce compte.'))
-      return setMessage(error.message)
+      // Keep signup failures generic so the form does not reveal whether a phone or email is already registered.
+      return setMessage(tr('signupFailed', 'Impossible de créer le compte avec ces informations. Vérifiez les informations et réessayez.'))
     }
     setMessage(tr('created', 'Compte créé. Vérifiez votre e-mail pour confirmer votre inscription.'))
   }
