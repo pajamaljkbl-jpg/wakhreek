@@ -34,13 +34,15 @@ export default function Home() {
     e.preventDefault()
     const displayName = form.displayName.trim(), phone = form.phone.trim(), email = form.email.trim().toLowerCase()
     if (!displayName || !phone || !email || !form.countryCode) return setMessage(tr('fillAll', 'Veuillez remplir tous les champs.'))
-    setMessage(tr('checking', 'Vérification des informations...'))
-    const { data: identity, error: identityError } = await supabase.rpc('check_registration_identity', { check_phone: phone, check_display_name: displayName })
-    if (identityError) return setMessage(tr('checkFailed', 'Impossible de vérifier les informations. Réessayez.'))
-    if (identity?.[0]?.phone_taken) return setMessage(tr('phoneTaken', 'Ce numéro de téléphone est déjà utilisé par un autre compte.'))
     setMessage(tr('creating', 'Création du compte...'))
     const { error } = await supabase.auth.signUp({ email, password: form.password, options: { emailRedirectTo: `${window.location.origin}${nextPath}`, data: { display_name: displayName, phone, country_code:form.countryCode } } })
-    setMessage(error ? error.message : tr('created', 'Compte créé. Vérifiez votre e-mail pour confirmer votre inscription.'))
+    if (error) {
+      const details = String(error.message || '')
+      const phoneConflict = /profiles_phone_unique_ci|duplicate key.*phone|phone.*already exists/i.test(details)
+      if (phoneConflict) return setMessage(tr('phoneTaken', 'Ce numéro de téléphone ne peut pas être utilisé pour créer ce compte.'))
+      return setMessage(error.message)
+    }
+    setMessage(tr('created', 'Compte créé. Vérifiez votre e-mail pour confirmer votre inscription.'))
   }
 
   async function signIn(e) {
