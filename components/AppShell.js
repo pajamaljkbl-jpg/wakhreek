@@ -15,21 +15,54 @@ export default function AppShell({ children, title }) {
   const publicMarket = pathname === '/market' || (pathname?.startsWith('/market/boutique/') && !pathname?.endsWith('/contact')) || pathname === '/social'
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        if (!publicMarket) { router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`); return }
-        setSession(null); setLoading(false); return
-      }
-      setSession(data.session); setLoading(false)
-    })
+    let mounted = true
+    let authEventReceived = false
+
+    // Subscribe before reading the stored session so a slower getSession()
+    // cannot overwrite a newer auth event and redirect a valid user away.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!nextSession) {
-        setSession(null)
-        if (!publicMarket) router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
-      } else setSession(nextSession)
+      authEventReceived = true
+      if (!mounted) return
+
+      setSession(nextSession)
+      setLoading(false)
+
+      if (!nextSession && !publicMarket) {
+        router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
+      }
     })
-    return () => listener.subscription.unsubscribe()
-  }, [router, publicMarket])
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted || authEventReceived) return
+
+      if (error) {
+        setLoading(false)
+        if (!publicMarket) {
+          router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
+        }
+        return
+      }
+
+      const nextSession = data?.session || null
+      setSession(nextSession)
+      setLoading(false)
+
+      if (!nextSession && !publicMarket) {
+        router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
+      }
+    }).catch(() => {
+      if (!mounted || authEventReceived) return
+      setLoading(false)
+      if (!publicMarket) {
+        router.replace(`/inscription?next=${encodeURIComponent(pathname || '/communication')}`)
+      }
+    })
+
+    return () => {
+      mounted = false
+      listener.subscription.unsubscribe()
+    }
+  }, [router, pathname, publicMarket])
 
   async function signOut() { await supabase.auth.signOut({ scope: 'local' }); router.replace('/') }
   if (loading || (!session && !publicMarket)) return <main className="app-loading" data-no-translate>{t('loading')}</main>
