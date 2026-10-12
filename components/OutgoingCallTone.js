@@ -18,7 +18,7 @@ export default function OutgoingCallTone(){
 
   async function sync(){
    if(!userId||cancelled)return
-   const{data,error}=await supabase.from('call_sessions').select('id,status').eq('caller_id',userId).eq('status','ringing').order('created_at',{ascending:false}).limit(1)
+   const cutoff=new Date(Date.now()-45000).toISOString();const{data,error}=await supabase.from('call_sessions').select('id,status,created_at').eq('caller_id',userId).eq('status','ringing').gte('created_at',cutoff).order('created_at',{ascending:false}).limit(1)
    if(cancelled)return
    if(error){stop();return}
    setWaiting(data?.[0]?.id||null)
