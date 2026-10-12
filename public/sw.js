@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wakhreek-v12-communication-offline';
+const CACHE_NAME = 'wakhreek-v13-communication-offline';
 
 // Only cache a public offline fallback and its logo. Never cache authenticated pages,
 // private messages, API responses, or Next.js application assets.
@@ -105,5 +105,14 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  const message = event.data || {};
+  if (message.type === 'SKIP_WAITING') self.skipWaiting();
+  if (message.type === 'CALL_RING_STOP' && message.call_id) {
+    event.waitUntil((async () => {
+      const notifications = await self.registration.getNotifications();
+      for (const notification of notifications) {
+        if (notification.data?.call_id === message.call_id) notification.close();
+      }
+    })());
+  }
 });
